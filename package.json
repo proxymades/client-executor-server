@@ -1,0 +1,32 @@
+{
+  "name": "clex",
+  "version": "1.0.0",
+  "description": "server clex",
+  "main": "index.js",
+  "private": "true",
+  "scripts": {
+    "dev": "nodemon src/index.js",
+    "migrate": "npx prisma migrate dev",
+    "generate": "npx prisma generate"
+  },
+  "author": "Rinat Khairulin",
+  "license": "ISC",
+  "dependencies": {
+    "@graphql-tools/schema": "^8.3.13",
+    "@prisma/client": "^3.14.0",
+    "apollo-server": "^3.7.0",
+    "apollo-server-express": "^3.7.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "express": "^4.18.1",
+    "graphql": "^16.5.0",
+    "graphql-subscriptions": "^2.0.0",
+    "graphql-upload": "^13.0.0",
+    "jsonwebtoken": "^8.5.1",
+    "subscriptions-transport-ws": "^0.11.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.16",
+    "prisma": "^3.14.0"
+  }
+}

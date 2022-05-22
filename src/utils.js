@@ -8,8 +8,8 @@ function getTokenPayload(token) {
     return jwt.verify(token, APP_SECRET)
 }
 
-//Получение username пользователя в заголовках
-function getUserName(req, authToken) {
+//Получение phone пользователя в заголовках
+function getUserPhone(req, authToken) {
     if (req) {
         const authHeader = req.headers.authorization
         if (authHeader) {
@@ -17,12 +17,12 @@ function getUserName(req, authToken) {
             if (!token) {
                 throw new Error('Токен не найден')
             }
-            const { username } = getTokenPayload(token)
-            return username
+            const { phone } = getTokenPayload(token)
+            return phone
         }
     } else if (authToken) {
-        const { username } = getTokenPayload(authToken)
-        return username
+        const { phone } = getTokenPayload(authToken)
+        return phone
     }
     throw new Error('Вы не аутентифицированы')
 }
@@ -50,6 +50,6 @@ function getUserId(req, authToken) {
 module.exports = {
     APP_SECRET,
     IMAGE_SECRET,
-    getUserName,
+    getUserPhone,
     getUserId
 }

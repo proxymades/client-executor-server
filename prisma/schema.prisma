@@ -9,14 +9,24 @@ generator client {
 
 //Models for MySQL DB
 
-//Аккаунт
-model User {
-  id       String   @id
-  username String   @unique @db.VarChar(30)
-  password String
-  regPhone String   @unique @db.VarChar(20)
-  regDate  DateTime @default(now())
-  fullName String   @db.VarChar(90)
-  avatar   String   @default("")
-  status   Boolean  @default(false)
+//accounts
+
+model Client {
+  id        String   @id
+  password  String
+  phone     String   @unique @db.VarChar(20)
+  name      String   @db.VarChar(90)
+  avatar    String   @default("")
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Executor {
+  id        String   @id
+  password  String
+  phone     String   @unique @db.VarChar(20)
+  name      String   @db.VarChar(90)
+  avatar    String   @default("")
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
 }

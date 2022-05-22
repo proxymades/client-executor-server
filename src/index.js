@@ -5,7 +5,7 @@ const Query = require('./resolvers/Query')
 const Mutation = require('./resolvers/Mutation')
 const { typeDefs } = require('./typeDefs/schema')
 
-const { getUserName, getUserId } = require('./utils')
+const { getUserPhone, getUserId } = require('./utils')
 
 const prisma = new PrismaClient()
 
@@ -22,9 +22,9 @@ const server = new ApolloServer({
         return {
             ...req,
             prisma,
-            username:
+            phone:
                 req && req.headers.authorization
-                    ? getUserName(req)
+                    ? getUserPhone(req)
                     : null
             ,
             id:

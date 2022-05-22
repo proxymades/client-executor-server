@@ -9,11 +9,11 @@ const { APP_SECRET } = require('../utils')
 
 //signup
 async function signup(parent, args, context, info) {
-    const username = args.username
+    const phone = args.phone
     const password = await bcrypt.hash(args.password, 12)
     const userPhone = await context.prisma.user.findUnique({
         where: {
-            regPhone: args.regPhone,
+            phone: phone,
         }
     })
     if (userPhone) {
@@ -22,14 +22,13 @@ async function signup(parent, args, context, info) {
     const user = await context.prisma.user.create({
         data: {
             id: args.id,
-            username: username,
+            phone: phone,
             password: password,
-            regPhone: args.regPhone,
             fullName: args.fullName,
         }
     })
     const token = jwt.sign({
-        username: user.username,
+        phone: user.phone,
         id: user.id
     }, APP_SECRET)
     return { token }
@@ -39,7 +38,7 @@ async function signup(parent, args, context, info) {
 async function login(parent, args, context, info) {
     const user = await context.prisma.user.findUnique({
         where: {
-            username: args.username
+            phone: args.phone
         }
     })
     if (!user) {
@@ -50,7 +49,7 @@ async function login(parent, args, context, info) {
         throw new Error('Неверный пароль')
     }
     const token = jwt.sign({
-        username: user.username,
+        phone: user.phone,
         id: user.id
     }, APP_SECRET)
     return { token, user }

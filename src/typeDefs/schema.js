@@ -4,12 +4,11 @@ const typeDefs = gql`
     #Types
     type User {
         id: ID!
-        username: String!
-        regPhone: String!
+        phone: String!
         fullName: String!
         avatar: String
         status: Boolean!
-        regDate: DateTime!
+        createdAt: DateTime!
     }
 
     #Auth
@@ -22,9 +21,8 @@ const typeDefs = gql`
     type Query{
 
         #app queries
-        checkUsername(username: String!): Boolean!
         checkPassword(password: String!): Boolean!
-        checkRegPhone(regPhone: String!): Boolean!
+        checkPhone(phone: String!): Boolean!
 
     }
 
@@ -33,14 +31,13 @@ const typeDefs = gql`
 
         signup(     
             id: ID!
-            username: String!
+            phone: String!
             password: String!
-            regPhone: String!
             fullName: String!
         ): AuthPayload
 
         login(
-            username: String! 
+            phone: String! 
             password: String!
         ): AuthPayload
 

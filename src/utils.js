@@ -8,8 +8,8 @@ function getTokenPayload(token) {
     return jwt.verify(token, APP_SECRET)
 }
 
-//Получение phone пользователя в заголовках
-function getUserPhone(req, authToken) {
+//get context phone
+function getPhone(req, authToken) {
     if (req) {
         const authHeader = req.headers.authorization
         if (authHeader) {
@@ -27,8 +27,8 @@ function getUserPhone(req, authToken) {
     throw new Error('Вы не аутентифицированы')
 }
 
-//Получение ID пользователя в заголовках
-function getUserId(req, authToken) {
+//get context id
+function getId(req, authToken) {
     if (req) {
         const authHeader = req.headers.authorization
         if (authHeader) {
@@ -46,10 +46,29 @@ function getUserId(req, authToken) {
     throw new Error('Вы не аутентифицированы')
 }
 
+//get context type
+function getType(req, authToken) {
+    if (req) {
+        const authHeader = req.headers.authorization
+        if (authHeader) {
+            const token = authHeader.replace('Bearer ', '')
+            if (!token) {
+                throw new Error('Токен не найден')
+            }
+            const { type } = getTokenPayload(token)
+            return type
+        }
+    } else if (authToken) {
+        const { type } = getTokenPayload(authToken)
+        return type
+    }
+    throw new Error('Вы не аутентифицированы')
+}
 
 module.exports = {
     APP_SECRET,
     IMAGE_SECRET,
-    getUserPhone,
-    getUserId
+    getPhone,
+    getId,
+    getType,
 }

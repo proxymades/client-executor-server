@@ -7,19 +7,20 @@ const { APP_SECRET } = require('../utils')
 
 // RESOLVERS
 
+// --------- client ------------
 //signup
-async function signup(parent, args, context, info) {
+async function clientSignup(parent, args, context, info) {
     const phone = args.phone
     const password = await bcrypt.hash(args.password, 12)
-    const userPhone = await context.prisma.user.findUnique({
+    const findedAccount = await context.prisma.client.findUnique({
         where: {
             phone: phone,
         }
     })
-    if (userPhone) {
+    if (findedAccount) {
         throw new Error('Номер телефона уже используется')
     }
-    const user = await context.prisma.user.create({
+    const client = await context.prisma.client.create({
         data: {
             id: args.id,
             phone: phone,
@@ -28,34 +29,34 @@ async function signup(parent, args, context, info) {
         }
     })
     const token = jwt.sign({
-        phone: user.phone,
-        id: user.id
+        phone: client.phone,
+        id: client.id
     }, APP_SECRET)
     return { token }
 }
 
 //login
-async function login(parent, args, context, info) {
-    const user = await context.prisma.user.findUnique({
+async function clientLogin(parent, args, context, info) {
+    const findedAccount = await context.prisma.client.findUnique({
         where: {
             phone: args.phone
         }
     })
-    if (!user) {
+    if (!findedAccount) {
         throw new Error('Пользователь не найден')
     }
-    const valid = await bcrypt.compare(args.password, user.password)
+    const valid = await bcrypt.compare(args.password, findedAccount.password)
     if (!valid) {
         throw new Error('Неверный пароль')
     }
     const token = jwt.sign({
-        phone: user.phone,
-        id: user.id
+        phone: findedAccount.phone,
+        id: findedAccount.id
     }, APP_SECRET)
-    return { token, user }
+    return { token, findedAccount }
 }
 
 module.exports = {
-    signup,
-    login,
+    clientSignup,
+    clientLogin,
 }

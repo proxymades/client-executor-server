@@ -1,22 +1,24 @@
 const bcrypt = require('bcryptjs')
 
+//----------- client ------------
+
 //check password
-async function checkPassword(parent, args, context) {
+async function clientCheckPassword(parent, args, context) {
     const { phone } = context
-    const findedUser = await context.prisma.user.findUnique({
+    const finded = await context.prisma.client.findUnique({
         where: {
             phone: phone
         }
     })
-    const valid = await bcrypt.compare(args.password, findedUser.password)
+    const valid = await bcrypt.compare(args.password, finded.password)
     if (valid) {
         return true
     } else return false
 }
 
 //check phone
-async function checkPhone(parent, args, context) {
-    const findedPhone = await context.prisma.user.findUnique({
+async function clientCheckPhone(parent, args, context) {
+    const findedPhone = await context.prisma.client.findUnique({
         where: {
             phone: args.phone
         }
@@ -28,7 +30,7 @@ async function checkPhone(parent, args, context) {
 
 
 module.exports = {
-    checkPassword,
-    checkPhone,
+    clientCheckPassword,
+    clientCheckPhone,
 }
 

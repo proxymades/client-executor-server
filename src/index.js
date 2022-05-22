@@ -24,13 +24,19 @@ const server = new ApolloServer({
             prisma,
             phone:
                 req && req.headers.authorization
-                    ? getUserPhone(req)
+                    ? getPhone(req)
                     : null
             ,
             id:
                 req && req.headers.authorization
-                    ? getUserId(req)
+                    ? getId(req)
                     : null
+            ,
+            type:
+                req && req.headers.authorization
+                    ? getType(req)
+                    : null
+            ,
         }
 
     }

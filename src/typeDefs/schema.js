@@ -2,44 +2,60 @@ const { gql } = require('apollo-server')
 
 const typeDefs = gql`
     #Types
-    type User {
+    type Client {
         id: ID!
         phone: String!
-        fullName: String!
+        name: String!
         avatar: String
-        status: Boolean!
+        verified: Boolean!
+        createdAt: DateTime!
+    }
+
+    type Executor {
+        id: ID!
+        phone: String!
+        name: String!
+        avatar: String
+        verified: Boolean!
         createdAt: DateTime!
     }
 
     #Auth
-    type AuthPayload {
+    type ClientAuthPayload {
         token: String
-        user: User
+        client: Client
+    }
+
+    type ExecutorAuthPayload {
+        token: String
+        executor: Executor
     }  
 
     #Query
     type Query{
 
         #app queries
-        checkPassword(password: String!): Boolean!
-        checkPhone(phone: String!): Boolean!
+        clientCheckPassword(password: String!): Boolean!
+        clientCheckPhone(phone: String!): Boolean!
 
     }
 
     #Mutation
     type Mutation{
 
-        signup(     
+        clientSignup(     
             id: ID!
             phone: String!
             password: String!
-            fullName: String!
-        ): AuthPayload
+            name: String!
+            type: String!
+        ): ClientAuthPayload
 
-        login(
+        clientLogin(
             phone: String! 
             password: String!
-        ): AuthPayload
+            type: String!
+        ): ClientAuthPayload
 
     }
 

@@ -35,8 +35,7 @@ const typeDefs = gql`
     type Query{
 
         #app queries
-        clientCheckPassword(password: String!): Boolean!
-        clientCheckPhone(phone: String!): Boolean!
+        checkClientPhone(phone: String!): Boolean!
 
     }
 
@@ -48,13 +47,11 @@ const typeDefs = gql`
             phone: String!
             password: String!
             name: String!
-            type: String!
         ): ClientAuthPayload
 
         clientLogin(
             phone: String! 
             password: String!
-            type: String!
         ): ClientAuthPayload
 
     }

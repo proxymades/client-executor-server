@@ -25,11 +25,12 @@ async function clientSignup(parent, args, context, info) {
             id: args.id,
             phone: phone,
             password: password,
-            fullName: args.fullName,
+            name: args.name,
         }
     })
     const token = jwt.sign({
         phone: client.phone,
+        type: 'client',
         id: client.id
     }, APP_SECRET)
     return { token }
@@ -51,6 +52,7 @@ async function clientLogin(parent, args, context, info) {
     }
     const token = jwt.sign({
         phone: findedAccount.phone,
+        type: 'client',
         id: findedAccount.id
     }, APP_SECRET)
     return { token, findedAccount }

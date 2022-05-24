@@ -34,8 +34,9 @@ const typeDefs = gql`
     #Query
     type Query{
 
-        #app queries
+        #client queries
         checkClientPhone(phone: String!): Boolean!
+        clientProfile(phone: String!): Client
 
     }
 

@@ -5,7 +5,7 @@ const Query = require('./resolvers/Query')
 const Mutation = require('./resolvers/Mutation')
 const { typeDefs } = require('./typeDefs/schema')
 
-const { getUserPhone, getUserId } = require('./utils')
+const { getPhone, getId, getType } = require('./utils')
 
 const prisma = new PrismaClient()
 

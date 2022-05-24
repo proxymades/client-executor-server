@@ -14,8 +14,21 @@ async function checkClientPhone(parent, args, context) {
     } else return false
 }
 
+//client profile
+async function clientProfile(parent, args, context) {
+    const { phone } = context
+    const client = await context.prisma.client.findUnique({
+        where: {
+            phone: args.phone
+        }
+    })
+    if (phone === args.phone) {
+        return client
+    } else return null
+}
 
 module.exports = {
     checkClientPhone,
+    clientProfile,
 }
 

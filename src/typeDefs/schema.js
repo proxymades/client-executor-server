@@ -43,6 +43,15 @@ const typeDefs = gql`
     #Mutation
     type Mutation{
 
+        #client
+        uploadClientAvatar(
+            file: Upload!
+        ): Void
+
+        deleteClientAvatar(
+            phone: String!
+        ): Void
+
         clientSignup(     
             id: ID!
             phone: String!
@@ -51,15 +60,22 @@ const typeDefs = gql`
         ): ClientAuthPayload
 
         clientLogin(
-            phone: String! 
+            phone: String!
             password: String!
         ): ClientAuthPayload
+
+        updateClientProfile(
+            phone: String!
+            name: String!
+            avatar: String
+        ): Void
 
     }
 
     scalar DateTime
     scalar Date
     scalar Void
+    scalar Upload
 `
 
 module.exports = {

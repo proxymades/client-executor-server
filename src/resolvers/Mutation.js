@@ -31,6 +31,23 @@ async function uploadClientAvatar(parent, { file }, context) {
     await finished(out)
 }
 
+async function uploadOrderImage(parent, { file, orderId }, context) {
+    const { createReadStream, filename, encoding, mimetype } = await file
+    const { ext } = path.parse(filename)
+    const validType = /\.(jpe?g|png)$/i.test(ext)
+    if (!validType) {
+        return new Error("Вы можете загружать только картинки")
+    }
+    const pathName = path.join(
+        __dirname,
+        `${IMAGES_URI}/images/client/orders/${orderId}.jpg`
+    )
+    const stream = createReadStream()
+    const out = fs.createWriteStream(pathName)
+    stream.pipe(out)
+    await finished(out)
+}
+
 async function deleteClientAvatar(parent, args, context, info) {
     const { phone, id } = context
     const pathName = path.join(
@@ -67,7 +84,7 @@ async function clientSignup(parent, args, context, info) {
             id: args.id,
             phone: phone,
             password: password,
-            name: args.name,
+            name: args.name.trim().replaceAll('\n', ' '),
         }
     })
     const token = jwt.sign({
@@ -116,7 +133,7 @@ async function updateClientProfile(parent, args, context, info) {
                 phone: args.phone
             },
             data: {
-                name: args.name.trim(),
+                name: args.name.trim().replaceAll('\n', ' '),
                 avatar: avatar,
             }
         })
@@ -124,11 +141,34 @@ async function updateClientProfile(parent, args, context, info) {
     }
 }
 
+//create order
+async function createOrder(parent, args, context, info) {
+    const { phone, id } = context
+    const imageHash = await bcrypt.hash(IMAGE_SECRET, 8)
+    const imagePath = args.image ? `images/client/orders/${id}-${args.id}.jpg` : ''
+    const image = args.image ? `${imagePath.split('?')[0]}?sh=${imageHash}` : ''
+    return await context.prisma.order.create({
+        data: {
+            id: args.id,
+            header: args.header.trim().replaceAll('\n', ' '),
+            category: args.category,
+            count: args.count.trim().replaceAll('\n', ' '),
+            text: args.text.trim(),
+            city: args.city,
+            urgent: args.urgent,
+            image: image,
+            creator: phone,
+        }
+    })
+}
+
 module.exports = {
     uploadClientAvatar,
+    uploadOrderImage,
     deleteClientAvatar,
 
     clientSignup,
     clientLogin,
     updateClientProfile,
+    createOrder,
 }

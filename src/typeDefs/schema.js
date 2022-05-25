@@ -9,6 +9,7 @@ const typeDefs = gql`
         avatar: String
         verified: Boolean!
         createdAt: DateTime!
+        order: [Order!]
     }
 
     type Executor {
@@ -19,6 +20,19 @@ const typeDefs = gql`
         verified: Boolean!
         createdAt: DateTime!
     }
+
+    type Order {
+        id: ID!
+        header: String!
+        category: String!
+        count: String!
+        text:  String!
+        city:  String!
+        urgent: Boolean!
+        image: String
+        createdAt: DateTime!
+        client: Client!
+}
 
     #Auth
     type ClientAuthPayload {
@@ -37,6 +51,7 @@ const typeDefs = gql`
         #client queries
         checkClientPhone(phone: String!): Boolean!
         clientProfile(phone: String!): Client
+        clientNewOrders(phone: String!): [Order!]
 
     }
 
@@ -46,6 +61,11 @@ const typeDefs = gql`
         #client
         uploadClientAvatar(
             file: Upload!
+        ): Void
+
+        uploadOrderImage(
+            file: Upload!
+            orderId: String!
         ): Void
 
         deleteClientAvatar(
@@ -69,6 +89,17 @@ const typeDefs = gql`
             name: String!
             avatar: String
         ): Void
+
+        createOrder(
+            id: ID!
+            header: String!
+            category: String!
+            count: String!
+            text:  String!
+            city:  String!
+            urgent: Boolean!
+            image: String
+        ): Order!
 
     }
 

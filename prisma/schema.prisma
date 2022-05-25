@@ -19,6 +19,7 @@ model Client {
   avatar    String   @default("")
   verified  Boolean  @default(false)
   createdAt DateTime @default(now())
+  order     Order[]
 }
 
 model Executor {
@@ -29,4 +30,22 @@ model Executor {
   avatar    String   @default("")
   verified  Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+model Order {
+  id        String   @id
+  header    String   @db.VarChar(30)
+  category  String   @db.VarChar(90)
+  count     String   @db.VarChar(10)
+  text      String   @db.VarChar(200)
+  city      String   @db.VarChar(90)
+  urgent    Boolean
+  image     String
+  client    Client   @relation(fields: [creator], references: [phone], onDelete: Cascade)
+  creator   String   @db.VarChar(20)
+  createdAt DateTime @default(now())
+  isWork    Boolean  @default(false)
+  isReady   Boolean  @default(false)
+
+  @@index([city])
 }

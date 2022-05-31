@@ -52,7 +52,7 @@ const typeDefs = gql`
         checkClientPhone(phone: String!): Boolean!
         clientProfile(phone: String!): Client
         clientNewOrders(phone: String!): [Order!]
-
+        order(id: ID!): Order!
     }
 
     #Mutation

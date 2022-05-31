@@ -52,9 +52,19 @@ async function clientNewOrders(parent, args, context) {
     } else return null
 }
 
+//client orders
+async function order(parent, args, context) {
+    return await context.prisma.order.findUnique({
+        where: {
+            id: args.id
+        }
+    })
+}
+
 module.exports = {
     checkClientPhone,
     clientProfile,
-    clientNewOrders
+    clientNewOrders,
+    order
 }
 

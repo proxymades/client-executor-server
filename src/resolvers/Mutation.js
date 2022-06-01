@@ -170,11 +170,128 @@ async function updateClientProfile(parent, args, context, info) {
     }
 }
 
+// --------- executor ------------
+
+//upload executor avatar
+async function uploadExecutorAvatar(parent, { file }, context) {
+    const { id } = context
+    const { createReadStream, filename, encoding, mimetype } = await file
+    const { ext } = path.parse(filename)
+    const validType = /\.(jpe?g|png)$/i.test(ext)
+    if (!validType) {
+        return new Error("Вы можете загружать только картинки")
+    }
+    const pathName = path.join(
+        __dirname,
+        `${IMAGES_URI}/images/executor/avatars/${id}.jpg`
+    )
+    const stream = createReadStream()
+    const out = fs.createWriteStream(pathName)
+    stream.pipe(out)
+    await finished(out)
+}
+
+//delete executor avatar
+async function deleteExecutorAvatar(parent, args, context, info) {
+    const { phone, id } = context
+    const pathName = path.join(
+        __dirname,
+        `${IMAGES_URI}/images/executor/avatars/${id}.jpg`
+    )
+    if (phone === args.phone) {
+        await context.prisma.executor.update({
+            where: {
+                phone: phone
+            },
+            data: {
+                avatar: ''
+            }
+        })
+        fs.existsSync(pathName) && fs.unlinkSync(pathName)
+    }
+}
+
+//signup executor
+async function executorSignup(parent, args, context, info) {
+    const phone = args.phone
+    const password = await bcrypt.hash(args.password, 12)
+    const findedExecutor = await context.prisma.executor.findUnique({
+        where: {
+            phone: phone,
+        }
+    })
+    if (findedExecutor) {
+        throw new Error('Номер телефона уже используется')
+    }
+    const executor = await context.prisma.executor.create({
+        data: {
+            id: args.id,
+            phone: phone,
+            password: password,
+            name: args.name.trim().replaceAll('\n', ' '),
+        }
+    })
+    const token = jwt.sign({
+        phone: executor.phone,
+        type: 'executor',
+        id: executor.id
+    }, APP_SECRET)
+    return { token }
+}
+
+//login executor
+async function executorLogin(parent, args, context, info) {
+    const findedExecutor = await context.prisma.executor.findUnique({
+        where: {
+            phone: args.phone
+        }
+    })
+    if (!findedExecutor) {
+        throw new Error('Пользователь не найден')
+    }
+    const valid = await bcrypt.compare(args.password, findedExecutor.password)
+    if (!valid) {
+        throw new Error('Неверный пароль')
+    }
+    const token = jwt.sign({
+        phone: findedExecutor.phone,
+        type: 'executor',
+        id: findedExecutor.id
+    }, APP_SECRET)
+    return { token, findedExecutor }
+}
+
+//update executor profile
+async function updateExecutorProfile(parent, args, context, info) {
+    const { phone, id } = context
+    const avatarImagePath = path.join(
+        __dirname,
+        `${IMAGES_URI}/images/executor/avatars/${id}.jpg`
+    )
+    const imageHash = await bcrypt.hash(IMAGE_SECRET, 8)
+    const avatarImage = args.avatar ? `images/executor/avatars/${args.avatar}.jpg` : ''
+    const avatar = args.avatar ? `${avatarImage.split('?')[0]}?sh=${imageHash}` : ''
+    if (phone === args.phone) {
+        await context.prisma.executor.update({
+            where: {
+                phone: args.phone
+            },
+            data: {
+                name: args.name.trim().replaceAll('\n', ' '),
+                avatar: avatar,
+            }
+        })
+        avatar || fs.existsSync(avatarImagePath) && fs.unlinkSync(avatarImagePath)
+    }
+}
+
+//-------- order -----------
+
 //create order
 async function createOrder(parent, args, context, info) {
     const { phone } = context
     const imageHash = await bcrypt.hash(IMAGE_SECRET, 8)
-    const imagePath = args.image ? `images/client/orders/${args.id}.jpg` : ''
+    const imagePath = args.image ? `images/executor/orders/${args.id}.jpg` : ''
     const image = args.image ? `${imagePath.split('?')[0]}?sh=${imageHash}` : ''
     return await context.prisma.order.create({
         data: {
@@ -244,13 +361,22 @@ async function deleteOrder(parent, args, context, info) {
 
 module.exports = {
     uploadClientAvatar,
-    uploadOrderImage,
     deleteClientAvatar,
-    deleteOrderImage,
 
     clientSignup,
     clientLogin,
     updateClientProfile,
+
+    uploadExecutorAvatar,
+    deleteExecutorAvatar,
+
+    executorSignup,
+    executorLogin,
+    updateExecutorProfile,
+
+    uploadOrderImage,
+    deleteOrderImage,
+
     createOrder,
     updateOrder,
     deleteOrder,

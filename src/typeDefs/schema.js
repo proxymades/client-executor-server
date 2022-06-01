@@ -53,6 +53,10 @@ const typeDefs = gql`
         clientProfile(phone: String!): Client
         clientNewOrders(phone: String!): [Order!]
         order(id: ID!): Order!
+
+        #executor queries
+        checkExecutorPhone(phone: String!): Boolean!
+        executorProfile(phone: String!): Executor
     }
 
     #Mutation
@@ -94,6 +98,34 @@ const typeDefs = gql`
             avatar: String
         ): Void
 
+        #executor
+        uploadExecutorAvatar(
+            file: Upload!
+        ): Void
+
+        deleteExecutorAvatar(
+            phone: String!
+        ): Void
+
+        executorSignup(     
+            id: ID!
+            phone: String!
+            password: String!
+            name: String!
+        ): ExecutorAuthPayload
+
+        executorLogin(
+            phone: String!
+            password: String!
+        ): ExecutorAuthPayload
+
+        updateExecutorProfile(
+            phone: String!
+            name: String!
+            avatar: String
+        ): Void
+
+        #order
         createOrder(
             id: ID!
             header: String!

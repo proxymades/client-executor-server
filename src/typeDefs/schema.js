@@ -101,6 +101,10 @@ const typeDefs = gql`
             image: String
         ): Order!
 
+        deleteOrder(
+            id: ID!
+        ): Void
+
     }
 
     scalar DateTime

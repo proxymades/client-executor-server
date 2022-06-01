@@ -162,6 +162,28 @@ async function createOrder(parent, args, context, info) {
     })
 }
 
+//delete order
+async function deleteOrder(parent, args, context, info) {
+    const { phone } = context
+    const imagePath = path.join(
+        __dirname,
+        `${IMAGES_URI}/images/client/orders/${args.id}.jpg`
+    )
+    const order = await context.prisma.order.findUnique({
+        where: {
+            id: args.id,
+        }
+    })
+    if (order.creator === phone) {
+        await context.prisma.order.delete({
+            where: {
+                id: args.id,
+            }
+        })
+        fs.existsSync(imagePath) && fs.unlinkSync(imagePath)
+    }
+}
+
 module.exports = {
     uploadClientAvatar,
     uploadOrderImage,
@@ -171,4 +193,5 @@ module.exports = {
     clientLogin,
     updateClientProfile,
     createOrder,
+    deleteOrder,
 }

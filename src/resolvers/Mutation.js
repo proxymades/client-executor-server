@@ -12,6 +12,7 @@ const { IMAGES_URI } = require('../uri')
 // RESOLVERS
 
 // --------- client ------------
+
 //upload avatar
 async function uploadClientAvatar(parent, { file }, context) {
     const { id } = context
@@ -31,6 +32,7 @@ async function uploadClientAvatar(parent, { file }, context) {
     await finished(out)
 }
 
+//upload order image
 async function uploadOrderImage(parent, { file, orderId }, context) {
     const { createReadStream, filename, encoding, mimetype } = await file
     const { ext } = path.parse(filename)
@@ -48,6 +50,7 @@ async function uploadOrderImage(parent, { file, orderId }, context) {
     await finished(out)
 }
 
+//delete client avatar
 async function deleteClientAvatar(parent, args, context, info) {
     const { phone, id } = context
     const pathName = path.join(
@@ -61,6 +64,32 @@ async function deleteClientAvatar(parent, args, context, info) {
             },
             data: {
                 avatar: ''
+            }
+        })
+        fs.existsSync(pathName) && fs.unlinkSync(pathName)
+    }
+}
+
+//delete order image
+async function deleteOrderImage(parent, args, context, info) {
+    const orderId = args.orderId
+    const { phone } = context
+    const pathName = path.join(
+        __dirname,
+        `${IMAGES_URI}/images/client/orders/${orderId}.jpg`
+    )
+    const order = await context.prisma.order.findUnique({
+        where: {
+            id: orderId
+        }
+    })
+    if (order.creator === phone) {
+        await context.prisma.order.update({
+            where: {
+                id: orderId
+            },
+            data: {
+                image: ''
             }
         })
         fs.existsSync(pathName) && fs.unlinkSync(pathName)
@@ -162,6 +191,35 @@ async function createOrder(parent, args, context, info) {
     })
 }
 
+//update order
+async function updateOrder(parent, args, context, info) {
+    const { phone } = context
+    const imageHash = await bcrypt.hash(IMAGE_SECRET, 8)
+    const imagePath = args.image ? `images/client/orders/${args.id}.jpg` : ''
+    const image = args.image ? `${imagePath.split('?')[0]}?sh=${imageHash}` : ''
+    const order = await context.prisma.order.findUnique({
+        where: {
+            id: args.id
+        }
+    })
+    if (order.creator === phone) {
+        await context.prisma.order.update({
+            where: {
+                id: args.id,
+            },
+            data: {
+                header: args.header.trim().replaceAll('\n', ' '),
+                category: args.category,
+                count: args.count.trim().replaceAll('\n', ' '),
+                text: args.text.trim(),
+                city: args.city,
+                urgent: args.urgent,
+                image: image,
+            }
+        })
+    }
+}
+
 //delete order
 async function deleteOrder(parent, args, context, info) {
     const { phone } = context
@@ -188,10 +246,12 @@ module.exports = {
     uploadClientAvatar,
     uploadOrderImage,
     deleteClientAvatar,
+    deleteOrderImage,
 
     clientSignup,
     clientLogin,
     updateClientProfile,
     createOrder,
+    updateOrder,
     deleteOrder,
 }

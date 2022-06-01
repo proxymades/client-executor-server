@@ -72,6 +72,10 @@ const typeDefs = gql`
             phone: String!
         ): Void
 
+        deleteOrderImage(
+            orderId: String!
+        ): Void
+
         clientSignup(     
             id: ID!
             phone: String!
@@ -100,6 +104,17 @@ const typeDefs = gql`
             urgent: Boolean!
             image: String
         ): Order!
+
+        updateOrder(
+            id: ID!
+            header: String!
+            category: String!
+            count: String!
+            text:  String!
+            city:  String!
+            urgent: Boolean!
+            image: String
+        ): Void
 
         deleteOrder(
             id: ID!

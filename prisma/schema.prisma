@@ -23,29 +23,40 @@ model Client {
 }
 
 model Executor {
-  id        String   @id
-  password  String
-  phone     String   @unique @db.VarChar(20)
-  name      String   @db.VarChar(90)
-  avatar    String   @default("")
-  verified  Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id           String         @id
+  password     String
+  phone        String         @unique @db.VarChar(20)
+  name         String         @db.VarChar(90)
+  avatar       String         @default("")
+  verified     Boolean        @default(false)
+  createdAt    DateTime       @default(now())
+  orderRequest OrderRequest[]
 }
 
 model Order {
-  id        String   @id
-  header    String   @db.VarChar(30)
-  category  String   @db.VarChar(90)
-  count     String   @db.VarChar(10)
-  text      String   @db.VarChar(200)
-  city      String   @db.VarChar(90)
-  urgent    Boolean
-  image     String
-  client    Client   @relation(fields: [creator], references: [phone], onDelete: Cascade)
-  creator   String   @db.VarChar(20)
-  createdAt DateTime @default(now())
-  isWork    Boolean  @default(false)
-  isReady   Boolean  @default(false)
+  id           String         @id
+  header       String         @db.VarChar(30)
+  category     String         @db.VarChar(90)
+  count        String         @db.VarChar(10)
+  text         String         @db.VarChar(200)
+  city         String         @db.VarChar(90)
+  urgent       Boolean
+  image        String
+  client       Client         @relation(fields: [creator], references: [phone], onDelete: Cascade)
+  creator      String         @db.VarChar(20)
+  createdAt    DateTime       @default(now())
+  isWork       Boolean        @default(false)
+  isReady      Boolean        @default(false)
+  orderRequest OrderRequest[]
 
   @@index([city])
+}
+
+model OrderRequest {
+  id        String   @id
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId   String
+  executor  Executor @relation(fields: [worker], references: [phone], onDelete: Cascade)
+  worker    String   @db.VarChar(20)
+  createdAt DateTime @default(now())
 }

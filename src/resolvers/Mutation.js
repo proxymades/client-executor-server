@@ -291,7 +291,7 @@ async function updateExecutorProfile(parent, args, context, info) {
 async function createOrder(parent, args, context, info) {
     const { phone } = context
     const imageHash = await bcrypt.hash(IMAGE_SECRET, 8)
-    const imagePath = args.image ? `images/executor/orders/${args.id}.jpg` : ''
+    const imagePath = args.image ? `images/client/orders/${args.id}.jpg` : ''
     const image = args.image ? `${imagePath.split('?')[0]}?sh=${imageHash}` : ''
     return await context.prisma.order.create({
         data: {

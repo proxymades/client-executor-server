@@ -34,6 +34,14 @@ const typeDefs = gql`
         client: Client!
 }
 
+    type OrderRequest {
+        id: ID!
+        orderId: String!
+        worker: String!
+        createdAt: DateTime!
+        order: Order!
+}
+
     #Auth
     type ClientAuthPayload {
         token: String
@@ -52,11 +60,18 @@ const typeDefs = gql`
         checkClientPhone(phone: String!): Boolean!
         clientProfile(phone: String!): Client
         clientNewOrders(phone: String!): [Order!]
-        order(id: ID!): Order!
 
+        #order
+        getOrder(id: ID!): Order!
+        
         #executor queries
         checkExecutorPhone(phone: String!): Boolean!
         executorProfile(phone: String!): Executor
+        executorNewOrders(
+            city: [String!]
+            category: [String!]
+        ): [Order!]
+        executorOrderRequests(phone: String!): [OrderRequest!]
     }
 
     #Mutation

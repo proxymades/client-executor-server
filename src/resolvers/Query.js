@@ -52,8 +52,8 @@ async function clientNewOrders(parent, args, context) {
     } else return null
 }
 
-//order
-async function order(parent, args, context) {
+//get order
+async function getOrder(parent, args, context) {
     return await context.prisma.order.findUnique({
         where: {
             id: args.id
@@ -82,25 +82,38 @@ async function executorProfile(parent, args, context) {
         where: {
             phone: args.phone
         },
-        include: {
-            order: {
-                select: {
-                    id: true
-                }
-            }
-        }
     })
     if (phone === args.phone) {
         return executor
     } else return null
 }
 
+//executor new orders
+async function executorNewOrders(parent, args, context) {
+    return await context.prisma.order.findMany({
+        where: {
+            city: {
+                in: args.city
+            },
+            category: {
+                in: args.category
+            },
+            isWork: false,
+            isReady: false,
+        },
+        orderBy: {
+            createdAt: 'desc'
+        }
+    })
+}
+
 module.exports = {
     checkClientPhone,
     clientProfile,
     clientNewOrders,
-    order,
+    getOrder,
     checkExecutorPhone,
     executorProfile,
+    executorNewOrders,
 }
 

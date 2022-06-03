@@ -19,6 +19,7 @@ const typeDefs = gql`
         avatar: String
         verified: Boolean!
         createdAt: DateTime!
+        orderRequest: [OrderRequest!]
     }
 
     type Order {
@@ -30,14 +31,18 @@ const typeDefs = gql`
         city:  String!
         urgent: Boolean!
         image: String
+        isReady: Boolean!
+        isWork: Boolean!
         createdAt: DateTime!
         client: Client!
+        orderRequest: [OrderRequest!]
 }
 
     type OrderRequest {
         id: ID!
         orderId: String!
         worker: String!
+        offer: String!
         createdAt: DateTime!
         order: Order!
 }
@@ -62,7 +67,8 @@ const typeDefs = gql`
         clientNewOrders(phone: String!): [Order!]
 
         #order
-        getOrder(id: ID!): Order!
+        getClientOrder(id: ID!): Order!
+        getExecutorOrder(id: ID!): Order!
         
         #executor queries
         checkExecutorPhone(phone: String!): Boolean!
@@ -165,6 +171,16 @@ const typeDefs = gql`
 
         deleteOrder(
             id: ID!
+        ): Void
+
+        createOrderRequest(
+            id: ID!
+            orderId: String!
+            offer: String!
+        ): String!
+
+        cancelOrderRequest(
+            orderId: ID!
         ): Void
 
     }

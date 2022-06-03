@@ -359,6 +359,51 @@ async function deleteOrder(parent, args, context, info) {
     }
 }
 
+//create order request
+async function createOrderRequest(parent, args, context, info) {
+    const { phone } = context
+    const existRequest = await context.prisma.orderRequest.findMany({
+        where: {
+            orderId: args.orderId,
+            worker: phone,
+        }
+    })
+    const orderIsWorked = await context.prisma.order.findMany({
+        where: {
+            id: args.orderId,
+            OR: [
+                { isWork: true },
+                { isReady: true },
+            ]
+        }
+    })
+    if (existRequest.length === 0 && orderIsWorked.length === 0) {
+        await context.prisma.orderRequest.create({
+            data: {
+                id: args.id,
+                offer: args.offer.trim(),
+                worker: phone,
+                orderId: args.orderId
+            }
+        })
+        return 'ok'
+    } else if (existRequest.length === 0 && orderIsWorked.length > 0) {
+        return 'worked'
+    } else return 'exist'
+}
+
+//cancel order request
+async function cancelOrderRequest(parent, args, context, info) {
+    const { phone } = context
+    await context.prisma.orderRequest.deleteMany({
+        where: {
+            orderId: args.orderId,
+            worker: phone
+        }
+    })
+}
+
+
 module.exports = {
     uploadClientAvatar,
     deleteClientAvatar,
@@ -380,4 +425,6 @@ module.exports = {
     createOrder,
     updateOrder,
     deleteOrder,
+    createOrderRequest,
+    cancelOrderRequest,
 }

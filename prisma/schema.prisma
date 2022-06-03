@@ -58,5 +58,6 @@ model OrderRequest {
   orderId   String
   executor  Executor @relation(fields: [worker], references: [phone], onDelete: Cascade)
   worker    String   @db.VarChar(20)
+  offer     String   @db.VarChar(10)
   createdAt DateTime @default(now())
 }

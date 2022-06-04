@@ -24,6 +24,7 @@ const typeDefs = gql`
 
     type Order {
         id: ID!
+        creator: String!
         header: String!
         category: String!
         count: String!
@@ -66,6 +67,7 @@ const typeDefs = gql`
         checkClientPhone(phone: String!): Boolean!
         clientProfile(phone: String!): Client
         clientNewOrders(phone: String!): [Order!]
+        clientOrderRequests: [OrderRequest!]
 
         #order
         getClientOrder(id: ID!): Order!

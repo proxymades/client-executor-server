@@ -52,6 +52,44 @@ async function clientNewOrders(parent, args, context) {
     } else return null
 }
 
+
+//client order requests
+async function clientOrderRequests(parent, args, context) {
+    const { phone } = context
+    return await context.prisma.orderRequest.findMany({
+        where: {
+            order: {
+                creator: phone,
+                isWork: false,
+                isReady: false,
+            }
+        },
+        include: {
+            order: true,
+            executor: {
+                select: {
+                    id: true,
+                    name: true,
+                    avatar: true,
+                    phone: true,
+                    verified: true,
+                    createdAt: true,
+                    orderRequest: {
+                        select: {
+                            id: true
+                        }
+                    }
+                }
+            }
+        },
+        orderBy: {
+            createdAt: 'desc'
+        }
+    })
+}
+
+//-----------order------------
+
 //get client order
 async function getClientOrder(parent, args, context) {
     return await context.prisma.order.findUnique({
@@ -167,6 +205,7 @@ module.exports = {
     checkClientPhone,
     clientProfile,
     clientNewOrders,
+    clientOrderRequests,
 
     getClientOrder,
     getExecutorOrder,

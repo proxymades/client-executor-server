@@ -45,6 +45,7 @@ const typeDefs = gql`
         offer: String!
         createdAt: DateTime!
         order: Order!
+        executor: Executor!
 }
 
     #Auth
@@ -73,10 +74,7 @@ const typeDefs = gql`
         #executor queries
         checkExecutorPhone(phone: String!): Boolean!
         executorProfile(phone: String!): Executor
-        executorNewOrders(
-            city: [String!]
-            category: [String!]
-        ): [Order!]
+        executorFeed(city: [String!], category: [String!]): [Order!]
         executorOrderRequests(phone: String!): [OrderRequest!]
     }
 

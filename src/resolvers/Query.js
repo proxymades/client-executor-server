@@ -52,6 +52,41 @@ async function clientNewOrders(parent, args, context) {
     } else return null
 }
 
+//client orders requests
+async function clientOrdersRequests(parent, args, context) {
+    const { phone } = context
+    return await context.prisma.orderRequest.findMany({
+        where: {
+            accepted: false,
+            order: {
+                creator: phone,
+                isWork: false,
+                isReady: false,
+            }
+        },
+        include: {
+            order: true,
+            executor: {
+                select: {
+                    id: true,
+                    name: true,
+                    avatar: true,
+                    phone: true,
+                    verified: true,
+                    createdAt: true,
+                    orderRequest: {
+                        select: {
+                            id: true
+                        }
+                    }
+                }
+            }
+        },
+        orderBy: {
+            createdAt: 'desc'
+        }
+    })
+}
 
 //client order requests
 async function clientOrderRequests(parent, args, context) {
@@ -59,8 +94,7 @@ async function clientOrderRequests(parent, args, context) {
     return await context.prisma.orderRequest.findMany({
         where: {
             order: {
-                creator: phone,
-                isWork: false,
+                id: args.orderId,
                 isReady: false,
             }
         },
@@ -205,6 +239,7 @@ module.exports = {
     checkClientPhone,
     clientProfile,
     clientNewOrders,
+    clientOrdersRequests,
     clientOrderRequests,
 
     getClientOrder,

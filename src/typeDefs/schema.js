@@ -44,6 +44,7 @@ const typeDefs = gql`
         orderId: String!
         worker: String!
         offer: String!
+        accepted: Boolean!
         createdAt: DateTime!
         order: Order!
         executor: Executor!
@@ -67,7 +68,8 @@ const typeDefs = gql`
         checkClientPhone(phone: String!): Boolean!
         clientProfile(phone: String!): Client
         clientNewOrders(phone: String!): [Order!]
-        clientOrderRequests: [OrderRequest!]
+        clientOrdersRequests: [OrderRequest!]
+        clientOrderRequests(orderId: ID!): [OrderRequest!]
 
         #order
         getClientOrder(id: ID!): Order!
@@ -183,6 +185,17 @@ const typeDefs = gql`
             orderId: ID!
         ): Void
 
+        acceptOrderRequest(
+            requestId: ID!
+            previousRequestId: String
+            orderId: String!
+        ): Void
+
+        repulseOrderRequest(
+            requestId: ID!
+            orderId: String!
+        ): Void
+        
     }
 
     scalar DateTime

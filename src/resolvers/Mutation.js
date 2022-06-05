@@ -403,6 +403,72 @@ async function cancelOrderRequest(parent, args, context, info) {
     })
 }
 
+//accept order request
+async function acceptOrderRequest(parent, args, context, info) {
+    const { phone } = context
+    const order = await context.prisma.order.findUnique({
+        where: {
+            id: args.orderId
+        }
+    })
+    if (order.creator === phone) {
+        await context.prisma.orderRequest.update({
+            where: {
+                id: args.requestId,
+            },
+            data: {
+                accepted: true
+            }
+        })
+        if (args.previousRequestId) {
+            await context.prisma.orderRequest.update({
+                where: {
+                    id: args.previousRequestId,
+                },
+                data: {
+                    accepted: false
+                }
+            })
+        }
+        await context.prisma.order.update({
+            where: {
+                id: args.orderId
+            },
+            data: {
+                isWork: true
+            }
+        })
+    }
+}
+
+//repulse order request
+async function repulseOrderRequest(parent, args, context, info) {
+    const { phone } = context
+    const order = await context.prisma.order.findUnique({
+        where: {
+            id: args.orderId
+        }
+    })
+    if (order.creator === phone) {
+        await context.prisma.orderRequest.update({
+            where: {
+                id: args.requestId,
+            },
+            data: {
+                accepted: false
+            }
+        })
+        await context.prisma.order.update({
+            where: {
+                id: args.orderId
+            },
+            data: {
+                isWork: false
+            }
+        })
+    }
+}
+
 
 module.exports = {
     uploadClientAvatar,
@@ -425,6 +491,9 @@ module.exports = {
     createOrder,
     updateOrder,
     deleteOrder,
+
     createOrderRequest,
     cancelOrderRequest,
+    acceptOrderRequest,
+    repulseOrderRequest,
 }

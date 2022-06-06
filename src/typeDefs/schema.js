@@ -37,7 +37,8 @@ const typeDefs = gql`
         createdAt: DateTime!
         client: Client!
         orderRequest: [OrderRequest!]
-}
+        feedbackExecutor: [FeedbackExecutor!]
+    }
 
     type OrderRequest {
         id: ID!
@@ -45,10 +46,20 @@ const typeDefs = gql`
         worker: String!
         offer: String!
         accepted: Boolean!
+        finished: Boolean!
         createdAt: DateTime!
         order: Order!
         executor: Executor!
-}
+    }
+
+    type FeedbackExecutor {
+        id: ID!
+        whoUser: String!
+        toUser: String!
+        rating: Int!
+        message: String!
+        createdAt: DateTime!
+    }
 
     #Auth
     type ClientAuthPayload {
@@ -67,8 +78,10 @@ const typeDefs = gql`
         #client queries
         checkClientPhone(phone: String!): Boolean!
         clientProfile(phone: String!): Client
-        clientNewOrders(phone: String!): [Order!]
-        clientOrdersRequests: [OrderRequest!]
+        clientNewOrders: [Order!]
+        clientWorkOrders: [Order!]
+        clientReadyOrders: [Order!]
+        clientActivity: [OrderRequest!]
         clientOrderRequests(orderId: ID!): [OrderRequest!]
 
         #order
@@ -195,6 +208,24 @@ const typeDefs = gql`
             requestId: ID!
             orderId: String!
         ): Void
+
+        acceptOrderWork(
+            orderId: ID!
+            requestId: String!
+        ): Void
+
+        repulseOrderWork(
+            orderId: ID!
+            requestId: String!
+        ): Void
+
+        writeFeedbackExecutor(
+            id: ID!
+            rating: Int!
+            message: String
+            toUser: String!
+            orderId: String!
+        ): Boolean!
         
     }
 

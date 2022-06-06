@@ -411,33 +411,40 @@ async function acceptOrderRequest(parent, args, context, info) {
             id: args.orderId
         }
     })
+    const orderRequest = await context.prisma.orderRequest.findUnique({
+        where: {
+            id: args.requestId
+        }
+    })
     if (order.creator === phone) {
-        await context.prisma.orderRequest.update({
-            where: {
-                id: args.requestId,
-            },
-            data: {
-                accepted: true
-            }
-        })
-        if (args.previousRequestId) {
+        if (orderRequest) {
             await context.prisma.orderRequest.update({
                 where: {
-                    id: args.previousRequestId,
+                    id: args.requestId,
                 },
                 data: {
-                    accepted: false
+                    accepted: true
+                }
+            })
+            if (args.previousRequestId) {
+                await context.prisma.orderRequest.update({
+                    where: {
+                        id: args.previousRequestId,
+                    },
+                    data: {
+                        accepted: false
+                    }
+                })
+            }
+            await context.prisma.order.update({
+                where: {
+                    id: args.orderId
+                },
+                data: {
+                    isWork: true
                 }
             })
         }
-        await context.prisma.order.update({
-            where: {
-                id: args.orderId
-            },
-            data: {
-                isWork: true
-            }
-        })
     }
 }
 
@@ -449,23 +456,129 @@ async function repulseOrderRequest(parent, args, context, info) {
             id: args.orderId
         }
     })
+    const orderRequest = await context.prisma.orderRequest.findUnique({
+        where: {
+            id: args.requestId
+        }
+    })
     if (order.creator === phone) {
-        await context.prisma.orderRequest.update({
-            where: {
-                id: args.requestId,
-            },
-            data: {
-                accepted: false
-            }
-        })
-        await context.prisma.order.update({
-            where: {
-                id: args.orderId
-            },
-            data: {
-                isWork: false
-            }
-        })
+        if (orderRequest) {
+            await context.prisma.orderRequest.update({
+                where: {
+                    id: args.requestId,
+                },
+                data: {
+                    accepted: false
+                }
+            })
+            await context.prisma.order.update({
+                where: {
+                    id: args.orderId
+                },
+                data: {
+                    isWork: false
+                }
+            })
+        }
+    }
+}
+
+//accept order work
+async function acceptOrderWork(parent, args, context, info) {
+    const { phone } = context
+    const order = await context.prisma.order.findUnique({
+        where: {
+            id: args.orderId
+        }
+    })
+    const orderRequest = await context.prisma.orderRequest.findUnique({
+        where: {
+            id: args.requestId
+        }
+    })
+    if (order.creator === phone) {
+        if (orderRequest) {
+            await context.prisma.orderRequest.update({
+                where: {
+                    id: args.requestId,
+                },
+                data: {
+                    finished: true
+                }
+            })
+            await context.prisma.order.update({
+                where: {
+                    id: args.orderId
+                },
+                data: {
+                    isWork: false,
+                    isReady: true
+                }
+            })
+        }
+    }
+}
+
+//repulse order work
+async function repulseOrderWork(parent, args, context, info) {
+    const { phone } = context
+    const order = await context.prisma.order.findUnique({
+        where: {
+            id: args.orderId
+        }
+    })
+    const orderRequest = await context.prisma.orderRequest.findUnique({
+        where: {
+            id: args.requestId
+        }
+    })
+    if (order.creator === phone) {
+        if (orderRequest) {
+            await context.prisma.orderRequest.delete({
+                where: {
+                    id: args.requestId,
+                }
+            })
+            await context.prisma.order.update({
+                where: {
+                    id: args.orderId
+                },
+                data: {
+                    isWork: false,
+                }
+            })
+        }
+    }
+}
+
+//write feedback to executor
+async function writeFeedbackExecutor(parent, args, context, info) {
+    const { phone } = context
+    const order = await context.prisma.order.findUnique({
+        where: {
+            id: args.orderId
+        }
+    })
+    const feedback = await context.prisma.feedbackExecutor.findMany({
+        where: {
+            orderId: args.orderId,
+            whoUser: phone,
+        }
+    })
+    if (order.creator === phone) {
+        if (!feedback) {
+            await context.prisma.feedbackExecutor.create({
+                data: {
+                    id: args.id,
+                    rating: args.rating,
+                    message: args.message || '',
+                    whoUser: phone,
+                    toUser: args.toUser,
+                    orderId: args.orderId
+                }
+            })
+            return true
+        } else return false
     }
 }
 
@@ -496,4 +609,7 @@ module.exports = {
     cancelOrderRequest,
     acceptOrderRequest,
     repulseOrderRequest,
+    acceptOrderWork,
+    repulseOrderWork,
+    writeFeedbackExecutor,
 }

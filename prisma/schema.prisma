@@ -12,42 +12,45 @@ generator client {
 //accounts
 
 model Client {
-  id        String   @id
-  password  String
-  phone     String   @unique @db.VarChar(20)
-  name      String   @db.VarChar(90)
-  avatar    String   @default("")
-  verified  Boolean  @default(false)
-  createdAt DateTime @default(now())
-  order     Order[]
+  id               String             @id
+  password         String
+  phone            String             @unique @db.VarChar(20)
+  name             String             @db.VarChar(90)
+  avatar           String             @default("")
+  verified         Boolean            @default(false)
+  createdAt        DateTime           @default(now())
+  order            Order[]
+  feedbackExecutor FeedbackExecutor[]
 }
 
 model Executor {
-  id           String         @id
-  password     String
-  phone        String         @unique @db.VarChar(20)
-  name         String         @db.VarChar(90)
-  avatar       String         @default("")
-  verified     Boolean        @default(false)
-  createdAt    DateTime       @default(now())
-  orderRequest OrderRequest[]
+  id               String             @id
+  password         String
+  phone            String             @unique @db.VarChar(20)
+  name             String             @db.VarChar(90)
+  avatar           String             @default("")
+  verified         Boolean            @default(false)
+  createdAt        DateTime           @default(now())
+  orderRequest     OrderRequest[]
+  feedbackExecutor FeedbackExecutor[]
 }
 
 model Order {
-  id           String         @id
-  header       String         @db.VarChar(30)
-  category     String         @db.VarChar(90)
-  count        String         @db.VarChar(10)
-  text         String         @db.VarChar(200)
-  city         String         @db.VarChar(90)
-  urgent       Boolean
-  image        String
-  client       Client         @relation(fields: [creator], references: [phone], onDelete: Cascade)
-  creator      String         @db.VarChar(20)
-  createdAt    DateTime       @default(now())
-  isWork       Boolean        @default(false)
-  isReady      Boolean        @default(false)
-  orderRequest OrderRequest[]
+  id               String             @id
+  header           String             @db.VarChar(30)
+  category         String             @db.VarChar(90)
+  count            String             @db.VarChar(10)
+  text             String             @db.VarChar(200)
+  city             String             @db.VarChar(90)
+  urgent           Boolean
+  image            String
+  client           Client             @relation(fields: [creator], references: [phone], onDelete: Cascade)
+  creator          String             @db.VarChar(20)
+  createdAt        DateTime           @default(now())
+  isWork           Boolean            @default(false)
+  isReady          Boolean            @default(false)
+  orderRequest     OrderRequest[]
+  feedbackExecutor FeedbackExecutor[]
 
   @@index([city])
 }
@@ -60,5 +63,19 @@ model OrderRequest {
   worker    String   @db.VarChar(20)
   offer     String   @db.VarChar(10)
   accepted  Boolean  @default(false)
+  finished  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model FeedbackExecutor {
+  id        String   @id
+  client    Client   @relation(fields: [whoUser], references: [phone], onDelete: Cascade)
+  whoUser   String   @db.VarChar(20)
+  executor  Executor @relation(fields: [toUser], references: [phone], onDelete: Cascade)
+  toUser    String   @db.VarChar(20)
+  rating    Int
+  message   String   @db.VarChar(200)
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId   String
   createdAt DateTime @default(now())
 }

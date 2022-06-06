@@ -37,9 +37,9 @@ async function clientProfile(parent, args, context) {
 //client new orders
 async function clientNewOrders(parent, args, context) {
     const { phone } = context
-    const orders = await context.prisma.order.findMany({
+    return await context.prisma.order.findMany({
         where: {
-            creator: args.phone,
+            creator: phone,
             isWork: false,
             isReady: false,
         },
@@ -47,13 +47,40 @@ async function clientNewOrders(parent, args, context) {
             createdAt: 'desc'
         }
     })
-    if (phone === args.phone) {
-        return orders
-    } else return null
+}
+
+//client work orders
+async function clientWorkOrders(parent, args, context) {
+    const { phone } = context
+    return await context.prisma.order.findMany({
+        where: {
+            creator: phone,
+            isWork: true,
+            isReady: false,
+        },
+        orderBy: {
+            createdAt: 'desc'
+        }
+    })
+}
+
+//client ready orders
+async function clientReadyOrders(parent, args, context) {
+    const { phone } = context
+    return await context.prisma.order.findMany({
+        where: {
+            creator: phone,
+            isWork: false,
+            isReady: true,
+        },
+        orderBy: {
+            createdAt: 'desc'
+        }
+    })
 }
 
 //client orders requests
-async function clientOrdersRequests(parent, args, context) {
+async function clientActivity(parent, args, context) {
     const { phone } = context
     return await context.prisma.orderRequest.findMany({
         where: {
@@ -90,12 +117,10 @@ async function clientOrdersRequests(parent, args, context) {
 
 //client order requests
 async function clientOrderRequests(parent, args, context) {
-    const { phone } = context
     return await context.prisma.orderRequest.findMany({
         where: {
             order: {
                 id: args.orderId,
-                isReady: false,
             }
         },
         include: {
@@ -239,7 +264,9 @@ module.exports = {
     checkClientPhone,
     clientProfile,
     clientNewOrders,
-    clientOrdersRequests,
+    clientWorkOrders,
+    clientReadyOrders,
+    clientActivity,
     clientOrderRequests,
 
     getClientOrder,

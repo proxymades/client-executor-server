@@ -150,7 +150,7 @@ async function clientOrderRequests(parent, args, context) {
 //-----------order------------
 
 //get client order
-async function getClientOrder(parent, args, context) {
+async function clientOrder(parent, args, context) {
     return await context.prisma.order.findUnique({
         where: {
             id: args.id
@@ -159,7 +159,7 @@ async function getClientOrder(parent, args, context) {
 }
 
 //get executor order
-async function getExecutorOrder(parent, args, context) {
+async function executorOrder(parent, args, context) {
     const { phone } = context
     return await context.prisma.order.findUnique({
         where: {
@@ -204,17 +204,19 @@ async function checkExecutorPhone(parent, args, context) {
 //executor profile
 async function executorProfile(parent, args, context) {
     const { phone } = context
-    const executor = await context.prisma.executor.findUnique({
+    return await context.prisma.executor.findUnique({
         where: {
-            phone: args.phone
+            phone: phone
         },
         include: {
-            orderRequest: true
+            orderRequest: {
+                where: {
+                    finished: true
+                }
+            },
+            feedbackExecutor: true,
         }
     })
-    if (phone === args.phone) {
-        return executor
-    } else return null
 }
 
 //executor new orders
@@ -245,19 +247,92 @@ async function executorFeed(parent, args, context) {
 //executor new orders requests
 async function executorOrderRequests(parent, args, context) {
     const { phone } = context
-    if (phone === args.phone) {
-        return await context.prisma.orderRequest.findMany({
-            where: {
-                worker: phone
+    return await context.prisma.orderRequest.findMany({
+        where: {
+            worker: phone,
+            accepted: false,
+        },
+        include: {
+            order: true
+        },
+        orderBy: {
+            createdAt: 'desc'
+        }
+    })
+}
+
+//executor work orders
+async function executorWorkOrders(parent, args, context) {
+    const { phone } = context
+    return await context.prisma.orderRequest.findMany({
+        where: {
+            worker: phone,
+            accepted: true,
+            finished: false
+        },
+        include: {
+            order: true
+        },
+        orderBy: {
+            createdAt: 'desc'
+        }
+    })
+}
+
+//executor ready orders
+async function executorReadyOrders(parent, args, context) {
+    const { phone } = context
+    return await context.prisma.orderRequest.findMany({
+        where: {
+            worker: phone,
+            accepted: true,
+            finished: true
+        },
+        include: {
+            order: true
+        },
+        orderBy: {
+            createdAt: 'desc'
+        }
+    })
+}
+
+//executor activity
+async function executorActivity(parent, args, context) {
+    const { phone } = context
+    return await context.prisma.orderRequest.findMany({
+        where: {
+            worker: phone,
+            accepted: true,
+        },
+        include: {
+            order: {
+                select: {
+                    id: true,
+                    header: true,
+                    image: true,
+                    client: {
+                        select: {
+                            id: true,
+                            name: true,
+                            avatar: true,
+                            phone: true,
+                            verified: true,
+                            createdAt: true,
+                            order: {
+                                select: {
+                                    id: true
+                                }
+                            }
+                        }
+                    }
+                }
             },
-            include: {
-                order: true
-            },
-            orderBy: {
-                createdAt: 'desc'
-            }
-        })
-    }
+        },
+        orderBy: {
+            createdAt: 'desc'
+        }
+    })
 }
 
 module.exports = {
@@ -268,13 +343,14 @@ module.exports = {
     clientReadyOrders,
     clientActivity,
     clientOrderRequests,
-
-    getClientOrder,
-    getExecutorOrder,
-
+    clientOrder,
+    executorOrder,
     checkExecutorPhone,
     executorProfile,
     executorFeed,
     executorOrderRequests,
+    executorWorkOrders,
+    executorReadyOrders,
+    executorActivity,
 }
 

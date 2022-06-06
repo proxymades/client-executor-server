@@ -20,6 +20,7 @@ const typeDefs = gql`
         verified: Boolean!
         createdAt: DateTime!
         orderRequest: [OrderRequest!]
+        feedbackExecutor: [FeedbackExecutor!]
     }
 
     type Order {
@@ -85,14 +86,17 @@ const typeDefs = gql`
         clientOrderRequests(orderId: ID!): [OrderRequest!]
 
         #order
-        getClientOrder(id: ID!): Order!
-        getExecutorOrder(id: ID!): Order!
+        clientOrder(id: ID!): Order!
+        executorOrder(id: ID!): Order!
         
         #executor queries
         checkExecutorPhone(phone: String!): Boolean!
-        executorProfile(phone: String!): Executor
+        executorProfile: Executor
         executorFeed(city: [String!], category: [String!]): [Order!]
-        executorOrderRequests(phone: String!): [OrderRequest!]
+        executorActivity: [OrderRequest!]
+        executorOrderRequests: [OrderRequest!]
+        executorWorkOrders: [OrderRequest!]
+        executorReadyOrders: [OrderRequest!]
     }
 
     #Mutation

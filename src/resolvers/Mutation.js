@@ -566,7 +566,7 @@ async function writeFeedbackExecutor(parent, args, context, info) {
         }
     })
     if (order.creator === phone) {
-        if (!feedback) {
+        if (feedback.length === 0) {
             await context.prisma.feedbackExecutor.create({
                 data: {
                     id: args.id,

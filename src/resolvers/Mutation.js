@@ -4,10 +4,37 @@ const jwt = require('jsonwebtoken')
 const fs = require('fs')
 const path = require('path')
 const { finished } = require('stream/promises')
+const admin = require('firebase-admin')
 
 //utils
 const { APP_SECRET, IMAGE_SECRET } = require('../utils')
 const { IMAGES_URI } = require('../uri')
+const serviceAccount = require('../../clex-493e2-firebase-adminsdk-nbbl0-9073f165ae.json')
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+})
+
+//notifications function
+function notificationData(text) {
+    const notification = {
+        title: 'clex',
+        body: text,
+        // imageUrl: 'https://alreme.com/images/avatars/ckzf54kfl007kextsed8dtv3f.jpg'
+    }
+    return notification
+}
+
+function androidData() {
+    const android = {
+        notification: {
+            icon: 'ic_notification',
+            color: '#282C34',
+            priority: 'high',
+            channelId: 'activity',
+        }
+    }
+    return android
+}
 
 // RESOLVERS
 
@@ -435,7 +462,30 @@ async function createOrderRequest(parent, args, context, info) {
             ]
         }
     })
+    const orderCreator = await context.prisma.order.findUnique({
+        where: {
+            id: args.orderId,
+        }
+    })
+    const tokens = await context.prisma.clientNotificationToken.findMany({
+        where: {
+            phone: orderCreator.creator
+        },
+        select: {
+            token: true
+        }
+    })
     if (existRequest.length === 0 && orderIsWorked.length === 0) {
+        if (tokens.length > 0) {
+            await admin.messaging().sendMulticast({
+                tokens: tokens.map(el => el.token),
+                notification: notificationData('Новая заявка к вашему заказу'),
+                android: androidData(),
+                data: {
+                    type: 'request'
+                }
+            })
+        }
         await context.prisma.orderRequest.create({
             data: {
                 id: args.id,

@@ -10,6 +10,7 @@ const typeDefs = gql`
         verified: Boolean!
         createdAt: DateTime!
         order: [Order!]
+        feedbackClient: [FeedbackClient!]
     }
 
     type Executor {
@@ -39,6 +40,7 @@ const typeDefs = gql`
         client: Client!
         orderRequest: [OrderRequest!]
         feedbackExecutor: [FeedbackExecutor!]
+        feedbackClient: [FeedbackClient!]
     }
 
     type OrderRequest {
@@ -60,6 +62,17 @@ const typeDefs = gql`
         rating: Int!
         message: String!
         createdAt: DateTime!
+        orderId: String!
+    }
+
+    type FeedbackClient {
+        id: ID!
+        whoUser: String!
+        toUser: String!
+        rating: Int!
+        message: String!
+        createdAt: DateTime!
+        orderId: String!
     }
 
     #Auth
@@ -78,7 +91,7 @@ const typeDefs = gql`
 
         #client queries
         checkClientPhone(phone: String!): Boolean!
-        clientProfile(phone: String!): Client
+        clientProfile: Client
         clientNewOrders: [Order!]
         clientWorkOrders: [Order!]
         clientReadyOrders: [Order!]
@@ -224,6 +237,14 @@ const typeDefs = gql`
         ): Void
 
         writeFeedbackExecutor(
+            id: ID!
+            rating: Int!
+            message: String
+            toUser: String!
+            orderId: String!
+        ): Boolean!
+
+        writeFeedbackClient(
             id: ID!
             rating: Int!
             message: String

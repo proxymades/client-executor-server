@@ -582,6 +582,37 @@ async function writeFeedbackExecutor(parent, args, context, info) {
     }
 }
 
+//write feedback to client
+async function writeFeedbackClient(parent, args, context, info) {
+    const { phone } = context
+    const order = await context.prisma.order.findUnique({
+        where: {
+            id: args.orderId
+        }
+    })
+    const feedback = await context.prisma.feedbackClient.findMany({
+        where: {
+            orderId: args.orderId,
+            whoUser: phone,
+        }
+    })
+    if (order.creator === args.toUser) {
+        if (feedback.length === 0) {
+            await context.prisma.feedbackClient.create({
+                data: {
+                    id: args.id,
+                    rating: args.rating,
+                    message: args.message || '',
+                    whoUser: phone,
+                    toUser: args.toUser,
+                    orderId: args.orderId
+                }
+            })
+            return true
+        } else return false
+    }
+}
+
 
 module.exports = {
     uploadClientAvatar,
@@ -612,4 +643,5 @@ module.exports = {
     acceptOrderWork,
     repulseOrderWork,
     writeFeedbackExecutor,
+    writeFeedbackClient,
 }

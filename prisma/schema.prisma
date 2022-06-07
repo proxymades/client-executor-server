@@ -21,6 +21,7 @@ model Client {
   createdAt        DateTime           @default(now())
   order            Order[]
   feedbackExecutor FeedbackExecutor[]
+  feedbackClient   FeedbackClient[]
 }
 
 model Executor {
@@ -33,6 +34,7 @@ model Executor {
   createdAt        DateTime           @default(now())
   orderRequest     OrderRequest[]
   feedbackExecutor FeedbackExecutor[]
+  feedbackClient   FeedbackClient[]
 }
 
 model Order {
@@ -51,6 +53,7 @@ model Order {
   isReady          Boolean            @default(false)
   orderRequest     OrderRequest[]
   feedbackExecutor FeedbackExecutor[]
+  feedbackClient   FeedbackClient[]
 
   @@index([city])
 }
@@ -72,6 +75,19 @@ model FeedbackExecutor {
   client    Client   @relation(fields: [whoUser], references: [phone], onDelete: Cascade)
   whoUser   String   @db.VarChar(20)
   executor  Executor @relation(fields: [toUser], references: [phone], onDelete: Cascade)
+  toUser    String   @db.VarChar(20)
+  rating    Int
+  message   String   @db.VarChar(200)
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId   String
+  createdAt DateTime @default(now())
+}
+
+model FeedbackClient {
+  id        String   @id
+  executor  Executor @relation(fields: [whoUser], references: [phone], onDelete: Cascade)
+  whoUser   String   @db.VarChar(20)
+  client    Client   @relation(fields: [toUser], references: [phone], onDelete: Cascade)
   toUser    String   @db.VarChar(20)
   rating    Int
   message   String   @db.VarChar(200)

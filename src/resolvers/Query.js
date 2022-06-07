@@ -17,21 +17,19 @@ async function checkClientPhone(parent, args, context) {
 //client profile
 async function clientProfile(parent, args, context) {
     const { phone } = context
-    const client = await context.prisma.client.findUnique({
+    return await context.prisma.client.findUnique({
         where: {
-            phone: args.phone
+            phone: phone
         },
         include: {
             order: {
                 select: {
                     id: true
                 }
-            }
+            },
+            feedbackClient: true,
         }
     })
-    if (phone === args.phone) {
-        return client
-    } else return null
 }
 
 //client new orders
@@ -102,10 +100,14 @@ async function clientActivity(parent, args, context) {
                     verified: true,
                     createdAt: true,
                     orderRequest: {
+                        where: {
+                            finished: true
+                        },
                         select: {
                             id: true
                         }
-                    }
+                    },
+                    feedbackExecutor: true,
                 }
             }
         },
@@ -134,10 +136,14 @@ async function clientOrderRequests(parent, args, context) {
                     verified: true,
                     createdAt: true,
                     orderRequest: {
+                        where: {
+                            finished: true
+                        },
                         select: {
                             id: true
                         }
-                    }
+                    },
+                    feedbackExecutor: true,
                 }
             }
         },
@@ -168,6 +174,7 @@ async function executorOrder(parent, args, context) {
         include: {
             client: {
                 select: {
+                    id: true,
                     name: true,
                     verified: true,
                     createdAt: true,
@@ -175,7 +182,8 @@ async function executorOrder(parent, args, context) {
                         select: {
                             id: true,
                         }
-                    }
+                    },
+                    feedbackClient: true,
                 }
             },
             orderRequest: {
@@ -212,6 +220,9 @@ async function executorProfile(parent, args, context) {
             orderRequest: {
                 where: {
                     finished: true
+                },
+                select: {
+                    id: true
                 }
             },
             feedbackExecutor: true,
@@ -323,7 +334,8 @@ async function executorActivity(parent, args, context) {
                                 select: {
                                     id: true
                                 }
-                            }
+                            },
+                            feedbackClient: true,
                         }
                     }
                 }

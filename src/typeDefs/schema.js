@@ -251,6 +251,28 @@ const typeDefs = gql`
             toUser: String!
             orderId: String!
         ): Boolean!
+
+        registerClientNotificationToken(
+            id: ID!
+            phone: String!
+            token: String!
+        ): Void
+
+        deleteClientNotificationToken(
+            phone: String!
+            token: String!
+        ): Void
+
+        registerExecutorNotificationToken(
+            id: ID!
+            phone: String!
+            token: String!
+        ): Void
+
+        deleteExecutorNotificationToken(
+            phone: String!
+            token: String!
+        ): Void
         
     }
 

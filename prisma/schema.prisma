@@ -12,29 +12,31 @@ generator client {
 //accounts
 
 model Client {
-  id               String             @id
-  password         String
-  phone            String             @unique @db.VarChar(20)
-  name             String             @db.VarChar(90)
-  avatar           String             @default("")
-  verified         Boolean            @default(false)
-  createdAt        DateTime           @default(now())
-  order            Order[]
-  feedbackExecutor FeedbackExecutor[]
-  feedbackClient   FeedbackClient[]
+  id                      String                    @id
+  password                String
+  phone                   String                    @unique @db.VarChar(20)
+  name                    String                    @db.VarChar(90)
+  avatar                  String                    @default("")
+  verified                Boolean                   @default(false)
+  createdAt               DateTime                  @default(now())
+  order                   Order[]
+  feedbackExecutor        FeedbackExecutor[]
+  feedbackClient          FeedbackClient[]
+  clientNotificationToken ClientNotificationToken[]
 }
 
 model Executor {
-  id               String             @id
-  password         String
-  phone            String             @unique @db.VarChar(20)
-  name             String             @db.VarChar(90)
-  avatar           String             @default("")
-  verified         Boolean            @default(false)
-  createdAt        DateTime           @default(now())
-  orderRequest     OrderRequest[]
-  feedbackExecutor FeedbackExecutor[]
-  feedbackClient   FeedbackClient[]
+  id                        String                      @id
+  password                  String
+  phone                     String                      @unique @db.VarChar(20)
+  name                      String                      @db.VarChar(90)
+  avatar                    String                      @default("")
+  verified                  Boolean                     @default(false)
+  createdAt                 DateTime                    @default(now())
+  orderRequest              OrderRequest[]
+  feedbackExecutor          FeedbackExecutor[]
+  feedbackClient            FeedbackClient[]
+  executorNotificationToken ExecutorNotificationToken[]
 }
 
 model Order {
@@ -94,4 +96,18 @@ model FeedbackClient {
   order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   orderId   String
   createdAt DateTime @default(now())
+}
+
+model ClientNotificationToken {
+  id     String @id
+  client Client @relation(fields: [phone], references: [phone], onDelete: Cascade)
+  phone  String @db.VarChar(20)
+  token  String @db.VarChar(300)
+}
+
+model ExecutorNotificationToken {
+  id       String   @id
+  executor Executor @relation(fields: [phone], references: [phone], onDelete: Cascade)
+  phone    String   @db.VarChar(20)
+  token    String   @db.VarChar(300)
 }

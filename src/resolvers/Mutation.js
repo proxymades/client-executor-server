@@ -11,6 +11,64 @@ const { IMAGES_URI } = require('../uri')
 
 // RESOLVERS
 
+//NOTIFICATIONS ----------------------------------------------------------------------------------------
+//register client notification token
+async function registerClientNotificationToken(parent, args, context, info) {
+    const tokens = await context.prisma.clientNotificationToken.findMany({
+        where: {
+            phone: args.phone
+        }
+    })
+    const isNewToken = tokens.find(el => el.token === args.token)
+    if (!isNewToken) {
+        await context.prisma.clientNotificationToken.create({
+            data: {
+                id: args.id,
+                phone: args.phone,
+                token: args.token,
+            },
+        })
+    }
+}
+
+//delete client notification token
+async function deleteClientNotificationToken(parent, args, context, info) {
+    await context.prisma.clientNotificationToken.deleteMany({
+        where: {
+            phone: args.phone,
+            token: args.token,
+        }
+    })
+}
+//register executor notification token
+async function registerExecutorNotificationToken(parent, args, context, info) {
+    const tokens = await context.prisma.executorNotificationToken.findMany({
+        where: {
+            phone: args.phone
+        }
+    })
+    const isNewToken = tokens.find(el => el.token === args.token)
+    if (!isNewToken) {
+        await context.prisma.executorNotificationToken.create({
+            data: {
+                id: args.id,
+                phone: args.phone,
+                token: args.token,
+            },
+        })
+    }
+}
+
+//delete executor notification token
+async function deleteExecutorNotificationToken(parent, args, context, info) {
+    await context.prisma.executorNotificationToken.deleteMany({
+        where: {
+            phone: args.phone,
+            token: args.token,
+        }
+    })
+}
+
 // --------- client ------------
 
 //upload avatar
@@ -613,8 +671,12 @@ async function writeFeedbackClient(parent, args, context, info) {
     }
 }
 
-
 module.exports = {
+    registerClientNotificationToken,
+    deleteClientNotificationToken,
+    registerExecutorNotificationToken,
+    deleteExecutorNotificationToken,
+
     uploadClientAvatar,
     deleteClientAvatar,
 

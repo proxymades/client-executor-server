@@ -462,14 +462,14 @@ async function createOrderRequest(parent, args, context, info) {
             ]
         }
     })
-    const orderCreator = await context.prisma.order.findUnique({
+    const order = await context.prisma.order.findUnique({
         where: {
             id: args.orderId,
         }
     })
     const tokens = await context.prisma.clientNotificationToken.findMany({
         where: {
-            phone: orderCreator.creator
+            phone: order.creator
         },
         select: {
             token: true
@@ -503,6 +503,29 @@ async function createOrderRequest(parent, args, context, info) {
 //cancel order request
 async function cancelOrderRequest(parent, args, context, info) {
     const { phone } = context
+    const order = await context.prisma.order.findUnique({
+        where: {
+            id: args.orderId,
+        }
+    })
+    const tokens = await context.prisma.clientNotificationToken.findMany({
+        where: {
+            phone: order.creator
+        },
+        select: {
+            token: true
+        }
+    })
+    if (tokens.length > 0) {
+        await admin.messaging().sendMulticast({
+            tokens: tokens.map(el => el.token),
+            notification: notificationData('Исполнитель отменил заявку'),
+            android: androidData(),
+            data: {
+                type: 'request'
+            }
+        })
+    }
     await context.prisma.orderRequest.deleteMany({
         where: {
             orderId: args.orderId,
@@ -524,8 +547,26 @@ async function acceptOrderRequest(parent, args, context, info) {
             id: args.requestId
         }
     })
+    const tokens = await context.prisma.executorNotificationToken.findMany({
+        where: {
+            phone: orderRequest.worker
+        },
+        select: {
+            token: true
+        }
+    })
     if (order.creator === phone) {
         if (orderRequest) {
+            if (tokens.length > 0) {
+                await admin.messaging().sendMulticast({
+                    tokens: tokens.map(el => el.token),
+                    notification: notificationData('Ваша заявка к заказу подтверждена'),
+                    android: androidData(),
+                    data: {
+                        type: 'requestAccepting'
+                    }
+                })
+            }
             await context.prisma.orderRequest.update({
                 where: {
                     id: args.requestId,
@@ -569,8 +610,26 @@ async function repulseOrderRequest(parent, args, context, info) {
             id: args.requestId
         }
     })
+    const tokens = await context.prisma.executorNotificationToken.findMany({
+        where: {
+            phone: orderRequest.worker
+        },
+        select: {
+            token: true
+        }
+    })
     if (order.creator === phone) {
         if (orderRequest) {
+            if (tokens.length > 0) {
+                await admin.messaging().sendMulticast({
+                    tokens: tokens.map(el => el.token),
+                    notification: notificationData('Заказчик отменил выполнение работы'),
+                    android: androidData(),
+                    data: {
+                        type: 'requestAccepting'
+                    }
+                })
+            }
             await context.prisma.orderRequest.update({
                 where: {
                     id: args.requestId,
@@ -604,8 +663,26 @@ async function acceptOrderWork(parent, args, context, info) {
             id: args.requestId
         }
     })
+    const tokens = await context.prisma.executorNotificationToken.findMany({
+        where: {
+            phone: orderRequest.worker
+        },
+        select: {
+            token: true
+        }
+    })
     if (order.creator === phone) {
         if (orderRequest) {
+            if (tokens.length > 0) {
+                await admin.messaging().sendMulticast({
+                    tokens: tokens.map(el => el.token),
+                    notification: notificationData('Поздравляем! Заказ выполнен.'),
+                    android: androidData(),
+                    data: {
+                        type: 'requestAccepting'
+                    }
+                })
+            }
             await context.prisma.orderRequest.update({
                 where: {
                     id: args.requestId,
@@ -640,8 +717,26 @@ async function repulseOrderWork(parent, args, context, info) {
             id: args.requestId
         }
     })
+    const tokens = await context.prisma.executorNotificationToken.findMany({
+        where: {
+            phone: orderRequest.worker
+        },
+        select: {
+            token: true
+        }
+    })
     if (order.creator === phone) {
         if (orderRequest) {
+            if (tokens.length > 0) {
+                await admin.messaging().sendMulticast({
+                    tokens: tokens.map(el => el.token),
+                    notification: notificationData('Работа отклонена, к сожалению вы не выполнили заказ'),
+                    android: androidData(),
+                    data: {
+                        type: 'requestAccepting'
+                    }
+                })
+            }
             await context.prisma.orderRequest.delete({
                 where: {
                     id: args.requestId,
@@ -673,8 +768,26 @@ async function writeFeedbackExecutor(parent, args, context, info) {
             whoUser: phone,
         }
     })
+    const tokens = await context.prisma.executorNotificationToken.findMany({
+        where: {
+            phone: args.toUser
+        },
+        select: {
+            token: true
+        }
+    })
     if (order.creator === phone) {
         if (feedback.length === 0) {
+            if (args.message !== '' && tokens.length > 0) {
+                await admin.messaging().sendMulticast({
+                    tokens: tokens.map(el => el.token),
+                    notification: notificationData('Вам оставлен новый отзыв'),
+                    android: androidData(),
+                    data: {
+                        type: 'feedbackExecutor'
+                    }
+                })
+            }
             await context.prisma.feedbackExecutor.create({
                 data: {
                     id: args.id,
@@ -704,8 +817,26 @@ async function writeFeedbackClient(parent, args, context, info) {
             whoUser: phone,
         }
     })
+    const tokens = await context.prisma.clientNotificationToken.findMany({
+        where: {
+            phone: args.toUser
+        },
+        select: {
+            token: true
+        }
+    })
     if (order.creator === args.toUser) {
         if (feedback.length === 0) {
+            if (args.message !== '' && tokens.length > 0) {
+                await admin.messaging().sendMulticast({
+                    tokens: tokens.map(el => el.token),
+                    notification: notificationData('Вам оставлен новый отзыв'),
+                    android: androidData(),
+                    data: {
+                        type: 'feedbackClient'
+                    }
+                })
+            }
             await context.prisma.feedbackClient.create({
                 data: {
                     id: args.id,

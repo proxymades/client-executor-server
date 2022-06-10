@@ -63,6 +63,7 @@ const typeDefs = gql`
         message: String!
         createdAt: DateTime!
         orderId: String!
+        client: Client!
     }
 
     type FeedbackClient {
@@ -73,6 +74,7 @@ const typeDefs = gql`
         message: String!
         createdAt: DateTime!
         orderId: String!
+        executor: Executor!
     }
 
     #Auth
@@ -97,6 +99,7 @@ const typeDefs = gql`
         clientReadyOrders: [Order!]
         clientActivity: [OrderRequest!]
         clientOrderRequests(orderId: ID!): [OrderRequest!]
+        clientFeedbacks: [FeedbackClient!]
 
         #order
         clientOrder(id: ID!): Order!
@@ -110,6 +113,7 @@ const typeDefs = gql`
         executorOrderRequests: [OrderRequest!]
         executorWorkOrders: [OrderRequest!]
         executorReadyOrders: [OrderRequest!]
+        executorFeedbacks: [FeedbackExecutor!]
     }
 
     #Mutation

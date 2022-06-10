@@ -153,6 +153,29 @@ async function clientOrderRequests(parent, args, context) {
     })
 }
 
+//client feedbacks
+async function clientFeedbacks(parent, args, context) {
+    const { phone } = context
+    return await context.prisma.feedbackClient.findMany({
+        where: {
+            toUser: phone,
+        },
+        include: {
+            executor: {
+                select: {
+                    id: true,
+                    name: true,
+                    avatar: true,
+                    verified: true,
+                }
+            }
+        },
+        orderBy: {
+            createdAt: 'desc'
+        }
+    })
+}
+
 //-----------order------------
 
 //get client order
@@ -347,6 +370,29 @@ async function executorActivity(parent, args, context) {
     })
 }
 
+//executor feedbacks
+async function executorFeedbacks(parent, args, context) {
+    const { phone } = context
+    return await context.prisma.feedbackExecutor.findMany({
+        where: {
+            toUser: phone,
+        },
+        include: {
+            client: {
+                select: {
+                    id: true,
+                    name: true,
+                    avatar: true,
+                    verified: true,
+                }
+            }
+        },
+        orderBy: {
+            createdAt: 'desc'
+        }
+    })
+}
+
 module.exports = {
     checkClientPhone,
     clientProfile,
@@ -355,6 +401,7 @@ module.exports = {
     clientReadyOrders,
     clientActivity,
     clientOrderRequests,
+    clientFeedbacks,
     clientOrder,
     executorOrder,
     checkExecutorPhone,
@@ -364,5 +411,6 @@ module.exports = {
     executorWorkOrders,
     executorReadyOrders,
     executorActivity,
+    executorFeedbacks,
 }
 

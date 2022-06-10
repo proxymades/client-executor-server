@@ -34,6 +34,8 @@ const resolvers = {
 
     const server = new ApolloServer({
         schema,
+        // introspection: false,
+        // playground: false,
         uploads: false,
         context: ({ req }) => {
             return {

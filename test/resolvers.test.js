@@ -23,7 +23,7 @@ function matches(row, where = {}) {
         : row[key] === value)
 }
 
-function fixture() {
+function fixture(options = {}) {
     const state = {
         client: [{ ...client, name: 'Client' }], executor: [{ ...executor, name: 'Executor' }],
         order: [
@@ -47,6 +47,7 @@ function fixture() {
                 data[name].push(created); return created
             },
             async update({ where, data: values }) {
+                if (name === 'order' && options.failOrderUpdate) throw new Error('Injected order write failure')
                 const row = data[name].find(row => matches(row, where))
                 if (!row) throw new Error('not found')
                 Object.assign(row, values); return row
@@ -221,4 +222,34 @@ test('GraphQL returns explicit authentication and access errors', async () => {
         const response = await server.executeOperation({ query: '{ clientOrder(id: "order-one") { id } }' })
         assert.equal(response.errors[0].extensions.code, 'FORBIDDEN')
     } finally { await server.stop() }
+})
+
+
+test('a failed order write rolls back the selected request and previous selection', async () => {
+    const f = fixture({ failOrderUpdate: true })
+    const before = structuredClone(f.state)
+    await assert.rejects(Mutation.acceptOrderRequest(null, args, f.client), /Injected order write failure/)
+    assert.deepEqual(f.state, before)
+})
+
+test('a Firebase credential failure does not undo a saved order transition', async () => {
+    const config = require('../src/config')
+    const enabled = config.firebaseEnabled, account = config.firebaseServiceAccount
+    const warn = console.warn
+    const warnings = []
+    config.firebaseEnabled = true
+    config.firebaseServiceAccount = '/clex-test-no-such-credential.json'
+    console.warn = message => warnings.push(message)
+    try {
+        const f = fixture()
+        await Mutation.acceptOrderRequest(null, args, f.client)
+        assert.equal(f.state.order[0].isWork, true)
+        assert.equal(f.state.orderRequest[0].accepted, true)
+        assert.equal(warnings.length, 1)
+        assert.equal(warnings[0].includes('credential'), false)
+    } finally {
+        config.firebaseEnabled = enabled
+        config.firebaseServiceAccount = account
+        console.warn = warn
+    }
 })

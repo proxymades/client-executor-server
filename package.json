@@ -3,11 +3,18 @@
   "version": "1.0.0",
   "description": "server clex",
   "main": "index.js",
-  "private": "true",
+  "private": true,
   "scripts": {
     "dev": "nodemon src/index.js",
     "migrate": "npx prisma migrate dev",
-    "generate": "npx prisma generate"
+    "generate": "npx prisma generate",
+    "start": "node src/index.js",
+    "images": "node images.js",
+    "test": "node --test test/*.test.js",
+    "check": "node scripts/check.js",
+    "migrate:deploy": "prisma migrate deploy",
+    "check:public": "node scripts/check-public-files.js",
+    "seed:demo": "node scripts/seed-demo.js"
   },
   "author": "Rinat Khairulin",
   "license": "ISC",
@@ -24,10 +31,14 @@
     "graphql-subscriptions": "^2.0.0",
     "graphql-upload": "^13.0.0",
     "jsonwebtoken": "^8.5.1",
-    "subscriptions-transport-ws": "^0.11.0"
+    "subscriptions-transport-ws": "^0.11.0",
+    "apollo-server-core": "^3.7.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.16",
     "prisma": "^3.14.0"
+  },
+  "engines": {
+    "node": ">=22.16.0"
   }
 }

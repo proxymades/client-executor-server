@@ -1,15 +1,8 @@
-const path = require('path')
 const express = require('express')
-const app = express()
 const cors = require('cors')
-const dir = path.join(__dirname, 'public')
-
-app.use(cors({
-    origin: 'http://localhost:3000'
-}))
-
-app.use(express.static(dir))
-
-app.listen(5001, function () {
-    console.log('Listening on http://localhost:5001/')
-})
+const { assetsDir, imagesPort, corsOrigins } = require('./src/config')
+const app = express()
+app.disable('x-powered-by')
+app.use(cors({ origin: corsOrigins }))
+app.use(express.static(assetsDir, { dotfiles: 'deny' }))
+app.listen(imagesPort, () => console.log(`Images: http://localhost:${imagesPort}/`))

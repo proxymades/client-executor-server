@@ -1,890 +1,242 @@
-//core
 const bcrypt = require('bcryptjs')
-const jwt = require('jsonwebtoken')
-const fs = require('fs')
-const path = require('path')
-const { finished } = require('stream/promises')
-const admin = require('firebase-admin')
+const { randomUUID } = require('node:crypto')
+const { UserInputError, ForbiddenError, AuthenticationError } = require('apollo-server-express')
+const { signToken } = require('../utils')
+const { requireRole, requireOwnPhone, identifier, ownedOrder, requestForOrder, withOrderTransaction } = require('../access')
+const validate = require('../validation')
+const { notify } = require('../notifications')
+const { imagePath, saveImage, deleteImage } = require('../uploads')
 
-//utils
-const { APP_SECRET, IMAGE_SECRET } = require('../utils')
-const { IMAGES_URI } = require('../uri')
-const serviceAccount = require('../../clex-493e2-firebase-adminsdk-nbbl0-9073f165ae.json')
-admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-})
+function imageReference(role, kind, id, present) {
+    return present ? `images/${role}/${kind}/${identifier(id)}.jpg?sh=${randomUUID()}` : ''
+}
 
-//notifications function
-function notificationData(text) {
-    const notification = {
-        title: 'clex',
-        body: text,
-        // imageUrl: 'https://alreme.com/images/avatars/ckzf54kfl007kextsed8dtv3f.jpg'
+async function registerNotificationToken(args, context, role) {
+    requireOwnPhone(context, args.phone, role)
+    identifier(args.id)
+    const token = validate.text(args.token, 'push-токен', 300)
+    const model = context.prisma[`${role}NotificationToken`]
+    const existing = await model.findMany({ where: { phone: context.phone, token } })
+    if (!existing.length) await model.create({ data: { id: args.id, phone: context.phone, token } })
+}
+
+async function deleteNotificationToken(args, context, role) {
+    requireOwnPhone(context, args.phone, role)
+    const token = validate.text(args.token, 'push-токен', 300)
+    await context.prisma[`${role}NotificationToken`].deleteMany({ where: { phone: context.phone, token } })
+}
+
+async function signup(args, context, role) {
+    identifier(args.id)
+    const phone = validate.phone(args.phone)
+    const name = validate.text(args.name, 'имя', 90).replace(/\s+/g, ' ')
+    const password = await bcrypt.hash(validate.password(args.password, true), 12)
+    const model = context.prisma[role]
+    if (await model.findUnique({ where: { phone } })) throw new UserInputError('Номер телефона уже используется')
+    let user
+    try {
+        user = await model.create({ data: { id: args.id, phone, password, name } })
+    } catch (error) {
+        if (error.code === 'P2002') throw new UserInputError('Аккаунт уже существует')
+        throw error
     }
-    return notification
+    return { token: signToken(user, role), [role]: user }
 }
 
-function androidData() {
-    const android = {
-        notification: {
-            icon: 'ic_notification',
-            color: '#282C34',
-            priority: 'high',
-            channelId: 'activity',
-        }
+async function login(args, context, role) {
+    const phone = validate.phone(args.phone)
+    const password = validate.password(args.password)
+    const user = await context.prisma[role].findUnique({ where: { phone } })
+    if (!user || !await bcrypt.compare(password, user.password)) {
+        throw new AuthenticationError('Неверный телефон или пароль')
     }
-    return android
+    return { token: signToken(user, role), [role]: user }
 }
 
-// RESOLVERS
-
-//NOTIFICATIONS ----------------------------------------------------------------------------------------
-//register client notification token
-async function registerClientNotificationToken(parent, args, context, info) {
-    const tokens = await context.prisma.clientNotificationToken.findMany({
-        where: {
-            phone: args.phone
-        }
-    })
-    const isNewToken = tokens.find(el => el.token === args.token)
-    if (!isNewToken) {
-        await context.prisma.clientNotificationToken.create({
-            data: {
-                id: args.id,
-                phone: args.phone,
-                token: args.token,
-            },
-        })
-    }
+async function updateProfile(args, context, role) {
+    requireOwnPhone(context, args.phone, role)
+    // Avatar references always belong to the authenticated account, never args.avatar.
+    const name = validate.text(args.name, 'имя', 90).replace(/\s+/g, ' ')
+    await context.prisma[role].update({ where: { phone: context.phone }, data: {
+        name, avatar: imageReference(role, 'avatars', context.id, Boolean(args.avatar)),
+    } })
+    if (!args.avatar) await deleteImage(imagePath(role, 'avatars', context.id))
 }
 
-//delete client notification token
-async function deleteClientNotificationToken(parent, args, context, info) {
-    await context.prisma.clientNotificationToken.deleteMany({
-        where: {
-            phone: args.phone,
-            token: args.token,
-        }
-    })
-}
-//register executor notification token
-async function registerExecutorNotificationToken(parent, args, context, info) {
-    const tokens = await context.prisma.executorNotificationToken.findMany({
-        where: {
-            phone: args.phone
-        }
-    })
-    const isNewToken = tokens.find(el => el.token === args.token)
-    if (!isNewToken) {
-        await context.prisma.executorNotificationToken.create({
-            data: {
-                id: args.id,
-                phone: args.phone,
-                token: args.token,
-            },
-        })
-    }
+async function uploadAvatar(file, context, role) {
+    requireRole(context, role)
+    await saveImage(file, imagePath(role, 'avatars', context.id))
 }
 
-//delete executor notification token
-async function deleteExecutorNotificationToken(parent, args, context, info) {
-    await context.prisma.executorNotificationToken.deleteMany({
-        where: {
-            phone: args.phone,
-            token: args.token,
-        }
-    })
+async function deleteAvatar(args, context, role) {
+    requireOwnPhone(context, args.phone, role)
+    await context.prisma[role].update({ where: { phone: context.phone }, data: { avatar: '' } })
+    await deleteImage(imagePath(role, 'avatars', context.id))
 }
 
-// --------- client ------------
-
-//upload avatar
-async function uploadClientAvatar(parent, { file }, context) {
-    const { id } = context
-    const { createReadStream, filename, encoding, mimetype } = await file
-    const { ext } = path.parse(filename)
-    const validType = /\.(jpe?g|png)$/i.test(ext)
-    if (!validType) {
-        return new Error("Вы можете загружать только картинки")
-    }
-    const pathName = path.join(
-        __dirname,
-        `${IMAGES_URI}/images/client/avatars/${id}.jpg`
-    )
-    const stream = createReadStream()
-    const out = fs.createWriteStream(pathName)
-    stream.pipe(out)
-    await finished(out)
-}
-
-//upload order image
 async function uploadOrderImage(parent, { file, orderId }, context) {
-    const { createReadStream, filename, encoding, mimetype } = await file
-    const { ext } = path.parse(filename)
-    const validType = /\.(jpe?g|png)$/i.test(ext)
-    if (!validType) {
-        return new Error("Вы можете загружать только картинки")
-    }
-    const pathName = path.join(
-        __dirname,
-        `${IMAGES_URI}/images/client/orders/${orderId}.jpg`
-    )
-    const stream = createReadStream()
-    const out = fs.createWriteStream(pathName)
-    stream.pipe(out)
-    await finished(out)
+    requireRole(context, 'client')
+    await ownedOrder(context.prisma, orderId, context.phone)
+    await saveImage(file, imagePath('client', 'orders', orderId))
 }
 
-//delete client avatar
-async function deleteClientAvatar(parent, args, context, info) {
-    const { phone, id } = context
-    const pathName = path.join(
-        __dirname,
-        `${IMAGES_URI}/images/client/avatars/${id}.jpg`
-    )
-    if (phone === args.phone) {
-        await context.prisma.client.update({
-            where: {
-                phone: phone
-            },
-            data: {
-                avatar: ''
-            }
-        })
-        fs.existsSync(pathName) && fs.unlinkSync(pathName)
-    }
+async function deleteOrderImage(parent, args, context) {
+    requireRole(context, 'client')
+    await withOrderTransaction(context.prisma, args.orderId, async tx => {
+        await ownedOrder(tx, args.orderId, context.phone)
+        await tx.order.update({ where: { id: args.orderId }, data: { image: '' } })
+    })
+    await deleteImage(imagePath('client', 'orders', args.orderId))
 }
 
-//delete order image
-async function deleteOrderImage(parent, args, context, info) {
-    const orderId = args.orderId
-    const { phone } = context
-    const pathName = path.join(
-        __dirname,
-        `${IMAGES_URI}/images/client/orders/${orderId}.jpg`
-    )
-    const order = await context.prisma.order.findUnique({
-        where: {
-            id: orderId
-        }
-    })
-    if (order.creator === phone) {
-        await context.prisma.order.update({
-            where: {
-                id: orderId
-            },
-            data: {
-                image: ''
-            }
-        })
-        fs.existsSync(pathName) && fs.unlinkSync(pathName)
-    }
+async function createOrder(parent, args, context) {
+    requireRole(context, 'client')
+    const data = validate.orderInput(args)
+    return context.prisma.order.create({ data: {
+        ...data, id: args.id, creator: context.phone,
+        image: imageReference('client', 'orders', args.id, Boolean(args.image)),
+    } })
 }
 
-//signup
-async function clientSignup(parent, args, context, info) {
-    const phone = args.phone
-    const password = await bcrypt.hash(args.password, 12)
-    const findedClient = await context.prisma.client.findUnique({
-        where: {
-            phone: phone,
-        }
+async function updateOrder(parent, args, context) {
+    requireRole(context, 'client')
+    const data = validate.orderInput(args)
+    await withOrderTransaction(context.prisma, args.id, async tx => {
+        await ownedOrder(tx, args.id, context.phone)
+        await tx.order.update({ where: { id: args.id }, data: {
+            ...data, image: imageReference('client', 'orders', args.id, Boolean(args.image)),
+        } })
     })
-    if (findedClient) {
-        throw new Error('Номер телефона уже используется')
-    }
-    const client = await context.prisma.client.create({
-        data: {
-            id: args.id,
-            phone: phone,
-            password: password,
-            name: args.name.trim().replaceAll('\n', ' '),
-        }
-    })
-    const token = jwt.sign({
-        phone: client.phone,
-        type: 'client',
-        id: client.id
-    }, APP_SECRET)
-    return { token }
+    if (!args.image) await deleteImage(imagePath('client', 'orders', args.id))
 }
 
-//login
-async function clientLogin(parent, args, context, info) {
-    const findedClient = await context.prisma.client.findUnique({
-        where: {
-            phone: args.phone
-        }
+async function deleteOrder(parent, args, context) {
+    requireRole(context, 'client')
+    await withOrderTransaction(context.prisma, args.id, async tx => {
+        await ownedOrder(tx, args.id, context.phone)
+        await tx.order.delete({ where: { id: args.id } })
     })
-    if (!findedClient) {
-        throw new Error('Пользователь не найден')
-    }
-    const valid = await bcrypt.compare(args.password, findedClient.password)
-    if (!valid) {
-        throw new Error('Неверный пароль')
-    }
-    const token = jwt.sign({
-        phone: findedClient.phone,
-        type: 'client',
-        id: findedClient.id
-    }, APP_SECRET)
-    return { token, findedClient }
+    await deleteImage(imagePath('client', 'orders', args.id))
 }
 
-//update client profile
-async function updateClientProfile(parent, args, context, info) {
-    const { phone, id } = context
-    const avatarImagePath = path.join(
-        __dirname,
-        `${IMAGES_URI}/images/client/avatars/${id}.jpg`
-    )
-    const imageHash = await bcrypt.hash(IMAGE_SECRET, 8)
-    const avatarImage = args.avatar ? `images/client/avatars/${args.avatar}.jpg` : ''
-    const avatar = args.avatar ? `${avatarImage.split('?')[0]}?sh=${imageHash}` : ''
-    if (phone === args.phone) {
-        await context.prisma.client.update({
-            where: {
-                phone: args.phone
-            },
-            data: {
-                name: args.name.trim().replaceAll('\n', ' '),
-                avatar: avatar,
-            }
-        })
-        avatar || fs.existsSync(avatarImagePath) && fs.unlinkSync(avatarImagePath)
-    }
+async function createOrderRequest(parent, args, context) {
+    requireRole(context, 'executor')
+    identifier(args.id)
+    const offer = validate.money(args.offer)
+    const result = await withOrderTransaction(context.prisma, args.orderId, async tx => {
+        const order = await tx.order.findUnique({ where: { id: args.orderId } })
+        if (!order || order.creator === context.phone) throw new ForbiddenError('Заказ недоступен')
+        const existing = await tx.orderRequest.findMany({ where: { orderId: args.orderId, worker: context.phone } })
+        if (existing.length) return { status: 'exist' }
+        if (order.isWork || order.isReady) return { status: 'worked' }
+        await tx.orderRequest.create({ data: { id: args.id, offer, worker: context.phone, orderId: args.orderId } })
+        return { status: 'ok', creator: order.creator }
+    })
+    if (result.status === 'ok') await notify(context.prisma, 'client', result.creator, 'Новая заявка к вашему заказу', 'request')
+    return result.status
 }
 
-// --------- executor ------------
-
-//upload executor avatar
-async function uploadExecutorAvatar(parent, { file }, context) {
-    const { id } = context
-    const { createReadStream, filename, encoding, mimetype } = await file
-    const { ext } = path.parse(filename)
-    const validType = /\.(jpe?g|png)$/i.test(ext)
-    if (!validType) {
-        return new Error("Вы можете загружать только картинки")
-    }
-    const pathName = path.join(
-        __dirname,
-        `${IMAGES_URI}/images/executor/avatars/${id}.jpg`
-    )
-    const stream = createReadStream()
-    const out = fs.createWriteStream(pathName)
-    stream.pipe(out)
-    await finished(out)
+async function cancelOrderRequest(parent, args, context) {
+    requireRole(context, 'executor')
+    const creator = await withOrderTransaction(context.prisma, args.orderId, async tx => {
+        const order = await tx.order.findUnique({ where: { id: args.orderId } })
+        if (!order) throw new ForbiddenError('Заказ недоступен')
+        const requests = await tx.orderRequest.findMany({ where: { orderId: args.orderId, worker: context.phone } })
+        if (!requests.length) throw new ForbiddenError('Заявка недоступна')
+        if (order.isWork || order.isReady || requests.some(r => r.accepted || r.finished)) {
+            throw new UserInputError('Нельзя отменить заявку на заказ в работе или завершённый заказ')
+        }
+        await tx.orderRequest.deleteMany({ where: { orderId: args.orderId, worker: context.phone } })
+        return order.creator
+    })
+    await notify(context.prisma, 'client', creator, 'Исполнитель отменил заявку', 'request')
 }
 
-//delete executor avatar
-async function deleteExecutorAvatar(parent, args, context, info) {
-    const { phone, id } = context
-    const pathName = path.join(
-        __dirname,
-        `${IMAGES_URI}/images/executor/avatars/${id}.jpg`
-    )
-    if (phone === args.phone) {
-        await context.prisma.executor.update({
-            where: {
-                phone: phone
-            },
-            data: {
-                avatar: ''
-            }
-        })
-        fs.existsSync(pathName) && fs.unlinkSync(pathName)
-    }
+async function acceptOrderRequest(parent, args, context) {
+    requireRole(context, 'client')
+    const worker = await withOrderTransaction(context.prisma, args.orderId, async tx => {
+        const order = await ownedOrder(tx, args.orderId, context.phone)
+        const request = await requestForOrder(tx, args.requestId, args.orderId)
+        if (args.previousRequestId) await requestForOrder(tx, args.previousRequestId, args.orderId)
+        if (order.isReady || request.finished) throw new UserInputError('Заказ уже завершён')
+        await tx.orderRequest.updateMany({ where: { orderId: args.orderId, accepted: true }, data: { accepted: false } })
+        await tx.orderRequest.update({ where: { id: request.id }, data: { accepted: true } })
+        await tx.order.update({ where: { id: args.orderId }, data: { isWork: true } })
+        return request.worker
+    })
+    await notify(context.prisma, 'executor', worker, 'Ваша заявка к заказу подтверждена', 'requestAccepting')
 }
 
-//signup executor
-async function executorSignup(parent, args, context, info) {
-    const phone = args.phone
-    const password = await bcrypt.hash(args.password, 12)
-    const findedExecutor = await context.prisma.executor.findUnique({
-        where: {
-            phone: phone,
+async function changeWork(args, context, action) {
+    requireRole(context, 'client')
+    const worker = await withOrderTransaction(context.prisma, args.orderId, async tx => {
+        const order = await ownedOrder(tx, args.orderId, context.phone)
+        const request = await requestForOrder(tx, args.requestId, args.orderId)
+        if (!order.isWork || order.isReady || !request.accepted || request.finished) {
+            throw new UserInputError('Заявка не находится в работе')
         }
+        if (action === 'finish') {
+            await tx.orderRequest.update({ where: { id: request.id }, data: { finished: true } })
+        } else if (action === 'cancel') {
+            await tx.orderRequest.update({ where: { id: request.id }, data: { accepted: false } })
+        } else {
+            await tx.orderRequest.delete({ where: { id: request.id } })
+        }
+        await tx.order.update({ where: { id: args.orderId }, data: { isWork: false, isReady: action === 'finish' } })
+        return request.worker
     })
-    if (findedExecutor) {
-        throw new Error('Номер телефона уже используется')
+    const messages = {
+        finish: 'Поздравляем! Заказ выполнен.',
+        cancel: 'Заказчик отменил выполнение работы',
+        reject: 'Работа отклонена, к сожалению вы не выполнили заказ',
     }
-    const executor = await context.prisma.executor.create({
-        data: {
-            id: args.id,
-            phone: phone,
-            password: password,
-            name: args.name.trim().replaceAll('\n', ' '),
-        }
-    })
-    const token = jwt.sign({
-        phone: executor.phone,
-        type: 'executor',
-        id: executor.id
-    }, APP_SECRET)
-    return { token }
+    await notify(context.prisma, 'executor', worker, messages[action], 'requestAccepting')
 }
 
-//login executor
-async function executorLogin(parent, args, context, info) {
-    const findedExecutor = await context.prisma.executor.findUnique({
-        where: {
-            phone: args.phone
+async function feedback(args, context, role) {
+    requireRole(context, role)
+    const data = validate.feedbackInput(args)
+    const toUser = validate.phone(args.toUser)
+    const result = await withOrderTransaction(context.prisma, args.orderId, async tx => {
+        const order = await tx.order.findUnique({ where: { id: args.orderId } })
+        if (!order || (role === 'client' && order.creator !== context.phone) || (role === 'executor' && order.creator !== toUser)) {
+            throw new ForbiddenError('Заказ недоступен')
         }
+        const worker = role === 'executor' ? context.phone : toUser
+        const requests = await tx.orderRequest.findMany({ where: { orderId: args.orderId, worker, accepted: true, finished: true } })
+        if (!order.isReady || !requests.length) throw new ForbiddenError('Отзыв доступен только участникам выполненного заказа')
+        const model = role === 'client' ? tx.feedbackExecutor : tx.feedbackClient
+        const existing = await model.findMany({ where: { orderId: args.orderId, whoUser: context.phone } })
+        if (existing.length) return false
+        await model.create({ data: { ...data, whoUser: context.phone, toUser, orderId: args.orderId } })
+        return true
     })
-    if (!findedExecutor) {
-        throw new Error('Пользователь не найден')
+    if (result && data.message) {
+        await notify(context.prisma, role === 'client' ? 'executor' : 'client', toUser, 'Вам оставлен новый отзыв', role === 'client' ? 'feedbackExecutor' : 'feedbackClient')
     }
-    const valid = await bcrypt.compare(args.password, findedExecutor.password)
-    if (!valid) {
-        throw new Error('Неверный пароль')
-    }
-    const token = jwt.sign({
-        phone: findedExecutor.phone,
-        type: 'executor',
-        id: findedExecutor.id
-    }, APP_SECRET)
-    return { token, findedExecutor }
-}
-
-//update executor profile
-async function updateExecutorProfile(parent, args, context, info) {
-    const { phone, id } = context
-    const avatarImagePath = path.join(
-        __dirname,
-        `${IMAGES_URI}/images/executor/avatars/${id}.jpg`
-    )
-    const imageHash = await bcrypt.hash(IMAGE_SECRET, 8)
-    const avatarImage = args.avatar ? `images/executor/avatars/${args.avatar}.jpg` : ''
-    const avatar = args.avatar ? `${avatarImage.split('?')[0]}?sh=${imageHash}` : ''
-    if (phone === args.phone) {
-        await context.prisma.executor.update({
-            where: {
-                phone: args.phone
-            },
-            data: {
-                name: args.name.trim().replaceAll('\n', ' '),
-                avatar: avatar,
-            }
-        })
-        avatar || fs.existsSync(avatarImagePath) && fs.unlinkSync(avatarImagePath)
-    }
-}
-
-//-------- order -----------
-
-//create order
-async function createOrder(parent, args, context, info) {
-    const { phone } = context
-    const imageHash = await bcrypt.hash(IMAGE_SECRET, 8)
-    const imagePath = args.image ? `images/client/orders/${args.id}.jpg` : ''
-    const image = args.image ? `${imagePath.split('?')[0]}?sh=${imageHash}` : ''
-    return await context.prisma.order.create({
-        data: {
-            id: args.id,
-            header: args.header.trim().replaceAll('\n', ' '),
-            category: args.category,
-            count: args.count.trim().replaceAll('\n', ' '),
-            text: args.text.trim(),
-            city: args.city,
-            urgent: args.urgent,
-            image: image,
-            creator: phone,
-        }
-    })
-}
-
-//update order
-async function updateOrder(parent, args, context, info) {
-    const { phone } = context
-    const imageHash = await bcrypt.hash(IMAGE_SECRET, 8)
-    const imagePath = args.image ? `images/client/orders/${args.id}.jpg` : ''
-    const image = args.image ? `${imagePath.split('?')[0]}?sh=${imageHash}` : ''
-    const order = await context.prisma.order.findUnique({
-        where: {
-            id: args.id
-        }
-    })
-    if (order.creator === phone) {
-        await context.prisma.order.update({
-            where: {
-                id: args.id,
-            },
-            data: {
-                header: args.header.trim().replaceAll('\n', ' '),
-                category: args.category,
-                count: args.count.trim().replaceAll('\n', ' '),
-                text: args.text.trim(),
-                city: args.city,
-                urgent: args.urgent,
-                image: image,
-            }
-        })
-    }
-}
-
-//delete order
-async function deleteOrder(parent, args, context, info) {
-    const { phone } = context
-    const imagePath = path.join(
-        __dirname,
-        `${IMAGES_URI}/images/client/orders/${args.id}.jpg`
-    )
-    const order = await context.prisma.order.findUnique({
-        where: {
-            id: args.id,
-        }
-    })
-    if (order.creator === phone) {
-        await context.prisma.order.delete({
-            where: {
-                id: args.id,
-            }
-        })
-        fs.existsSync(imagePath) && fs.unlinkSync(imagePath)
-    }
-}
-
-//create order request
-async function createOrderRequest(parent, args, context, info) {
-    const { phone } = context
-    const existRequest = await context.prisma.orderRequest.findMany({
-        where: {
-            orderId: args.orderId,
-            worker: phone,
-        }
-    })
-    const orderIsWorked = await context.prisma.order.findMany({
-        where: {
-            id: args.orderId,
-            OR: [
-                { isWork: true },
-                { isReady: true },
-            ]
-        }
-    })
-    const order = await context.prisma.order.findUnique({
-        where: {
-            id: args.orderId,
-        }
-    })
-    const tokens = await context.prisma.clientNotificationToken.findMany({
-        where: {
-            phone: order.creator
-        },
-        select: {
-            token: true
-        }
-    })
-    if (existRequest.length === 0 && orderIsWorked.length === 0) {
-        if (tokens.length > 0) {
-            await admin.messaging().sendMulticast({
-                tokens: tokens.map(el => el.token),
-                notification: notificationData('Новая заявка к вашему заказу'),
-                android: androidData(),
-                data: {
-                    type: 'request'
-                }
-            })
-        }
-        await context.prisma.orderRequest.create({
-            data: {
-                id: args.id,
-                offer: args.offer.trim(),
-                worker: phone,
-                orderId: args.orderId
-            }
-        })
-        return 'ok'
-    } else if (existRequest.length === 0 && orderIsWorked.length > 0) {
-        return 'worked'
-    } else return 'exist'
-}
-
-//cancel order request
-async function cancelOrderRequest(parent, args, context, info) {
-    const { phone } = context
-    const order = await context.prisma.order.findUnique({
-        where: {
-            id: args.orderId,
-        }
-    })
-    const tokens = await context.prisma.clientNotificationToken.findMany({
-        where: {
-            phone: order.creator
-        },
-        select: {
-            token: true
-        }
-    })
-    if (tokens.length > 0) {
-        await admin.messaging().sendMulticast({
-            tokens: tokens.map(el => el.token),
-            notification: notificationData('Исполнитель отменил заявку'),
-            android: androidData(),
-            data: {
-                type: 'request'
-            }
-        })
-    }
-    await context.prisma.orderRequest.deleteMany({
-        where: {
-            orderId: args.orderId,
-            worker: phone
-        }
-    })
-}
-
-//accept order request
-async function acceptOrderRequest(parent, args, context, info) {
-    const { phone } = context
-    const order = await context.prisma.order.findUnique({
-        where: {
-            id: args.orderId
-        }
-    })
-    const orderRequest = await context.prisma.orderRequest.findUnique({
-        where: {
-            id: args.requestId
-        }
-    })
-    const tokens = await context.prisma.executorNotificationToken.findMany({
-        where: {
-            phone: orderRequest.worker
-        },
-        select: {
-            token: true
-        }
-    })
-    if (order.creator === phone) {
-        if (orderRequest) {
-            if (tokens.length > 0) {
-                await admin.messaging().sendMulticast({
-                    tokens: tokens.map(el => el.token),
-                    notification: notificationData('Ваша заявка к заказу подтверждена'),
-                    android: androidData(),
-                    data: {
-                        type: 'requestAccepting'
-                    }
-                })
-            }
-            await context.prisma.orderRequest.update({
-                where: {
-                    id: args.requestId,
-                },
-                data: {
-                    accepted: true
-                }
-            })
-            if (args.previousRequestId) {
-                await context.prisma.orderRequest.update({
-                    where: {
-                        id: args.previousRequestId,
-                    },
-                    data: {
-                        accepted: false
-                    }
-                })
-            }
-            await context.prisma.order.update({
-                where: {
-                    id: args.orderId
-                },
-                data: {
-                    isWork: true
-                }
-            })
-        }
-    }
-}
-
-//repulse order request
-async function repulseOrderRequest(parent, args, context, info) {
-    const { phone } = context
-    const order = await context.prisma.order.findUnique({
-        where: {
-            id: args.orderId
-        }
-    })
-    const orderRequest = await context.prisma.orderRequest.findUnique({
-        where: {
-            id: args.requestId
-        }
-    })
-    const tokens = await context.prisma.executorNotificationToken.findMany({
-        where: {
-            phone: orderRequest.worker
-        },
-        select: {
-            token: true
-        }
-    })
-    if (order.creator === phone) {
-        if (orderRequest) {
-            if (tokens.length > 0) {
-                await admin.messaging().sendMulticast({
-                    tokens: tokens.map(el => el.token),
-                    notification: notificationData('Заказчик отменил выполнение работы'),
-                    android: androidData(),
-                    data: {
-                        type: 'requestAccepting'
-                    }
-                })
-            }
-            await context.prisma.orderRequest.update({
-                where: {
-                    id: args.requestId,
-                },
-                data: {
-                    accepted: false
-                }
-            })
-            await context.prisma.order.update({
-                where: {
-                    id: args.orderId
-                },
-                data: {
-                    isWork: false
-                }
-            })
-        }
-    }
-}
-
-//accept order work
-async function acceptOrderWork(parent, args, context, info) {
-    const { phone } = context
-    const order = await context.prisma.order.findUnique({
-        where: {
-            id: args.orderId
-        }
-    })
-    const orderRequest = await context.prisma.orderRequest.findUnique({
-        where: {
-            id: args.requestId
-        }
-    })
-    const tokens = await context.prisma.executorNotificationToken.findMany({
-        where: {
-            phone: orderRequest.worker
-        },
-        select: {
-            token: true
-        }
-    })
-    if (order.creator === phone) {
-        if (orderRequest) {
-            if (tokens.length > 0) {
-                await admin.messaging().sendMulticast({
-                    tokens: tokens.map(el => el.token),
-                    notification: notificationData('Поздравляем! Заказ выполнен.'),
-                    android: androidData(),
-                    data: {
-                        type: 'requestAccepting'
-                    }
-                })
-            }
-            await context.prisma.orderRequest.update({
-                where: {
-                    id: args.requestId,
-                },
-                data: {
-                    finished: true
-                }
-            })
-            await context.prisma.order.update({
-                where: {
-                    id: args.orderId
-                },
-                data: {
-                    isWork: false,
-                    isReady: true
-                }
-            })
-        }
-    }
-}
-
-//repulse order work
-async function repulseOrderWork(parent, args, context, info) {
-    const { phone } = context
-    const order = await context.prisma.order.findUnique({
-        where: {
-            id: args.orderId
-        }
-    })
-    const orderRequest = await context.prisma.orderRequest.findUnique({
-        where: {
-            id: args.requestId
-        }
-    })
-    const tokens = await context.prisma.executorNotificationToken.findMany({
-        where: {
-            phone: orderRequest.worker
-        },
-        select: {
-            token: true
-        }
-    })
-    if (order.creator === phone) {
-        if (orderRequest) {
-            if (tokens.length > 0) {
-                await admin.messaging().sendMulticast({
-                    tokens: tokens.map(el => el.token),
-                    notification: notificationData('Работа отклонена, к сожалению вы не выполнили заказ'),
-                    android: androidData(),
-                    data: {
-                        type: 'requestAccepting'
-                    }
-                })
-            }
-            await context.prisma.orderRequest.delete({
-                where: {
-                    id: args.requestId,
-                }
-            })
-            await context.prisma.order.update({
-                where: {
-                    id: args.orderId
-                },
-                data: {
-                    isWork: false,
-                }
-            })
-        }
-    }
-}
-
-//write feedback to executor
-async function writeFeedbackExecutor(parent, args, context, info) {
-    const { phone } = context
-    const order = await context.prisma.order.findUnique({
-        where: {
-            id: args.orderId
-        }
-    })
-    const feedback = await context.prisma.feedbackExecutor.findMany({
-        where: {
-            orderId: args.orderId,
-            whoUser: phone,
-        }
-    })
-    const tokens = await context.prisma.executorNotificationToken.findMany({
-        where: {
-            phone: args.toUser
-        },
-        select: {
-            token: true
-        }
-    })
-    if (order.creator === phone) {
-        if (feedback.length === 0) {
-            if (args.message !== '' && tokens.length > 0) {
-                await admin.messaging().sendMulticast({
-                    tokens: tokens.map(el => el.token),
-                    notification: notificationData('Вам оставлен новый отзыв'),
-                    android: androidData(),
-                    data: {
-                        type: 'feedbackExecutor'
-                    }
-                })
-            }
-            await context.prisma.feedbackExecutor.create({
-                data: {
-                    id: args.id,
-                    rating: args.rating,
-                    message: args.message || '',
-                    whoUser: phone,
-                    toUser: args.toUser,
-                    orderId: args.orderId
-                }
-            })
-            return true
-        } else return false
-    }
-}
-
-//write feedback to client
-async function writeFeedbackClient(parent, args, context, info) {
-    const { phone } = context
-    const order = await context.prisma.order.findUnique({
-        where: {
-            id: args.orderId
-        }
-    })
-    const feedback = await context.prisma.feedbackClient.findMany({
-        where: {
-            orderId: args.orderId,
-            whoUser: phone,
-        }
-    })
-    const tokens = await context.prisma.clientNotificationToken.findMany({
-        where: {
-            phone: args.toUser
-        },
-        select: {
-            token: true
-        }
-    })
-    if (order.creator === args.toUser) {
-        if (feedback.length === 0) {
-            if (args.message !== '' && tokens.length > 0) {
-                await admin.messaging().sendMulticast({
-                    tokens: tokens.map(el => el.token),
-                    notification: notificationData('Вам оставлен новый отзыв'),
-                    android: androidData(),
-                    data: {
-                        type: 'feedbackClient'
-                    }
-                })
-            }
-            await context.prisma.feedbackClient.create({
-                data: {
-                    id: args.id,
-                    rating: args.rating,
-                    message: args.message || '',
-                    whoUser: phone,
-                    toUser: args.toUser,
-                    orderId: args.orderId
-                }
-            })
-            return true
-        } else return false
-    }
+    return result
 }
 
 module.exports = {
-    registerClientNotificationToken,
-    deleteClientNotificationToken,
-    registerExecutorNotificationToken,
-    deleteExecutorNotificationToken,
-
-    uploadClientAvatar,
-    deleteClientAvatar,
-
-    clientSignup,
-    clientLogin,
-    updateClientProfile,
-
-    uploadExecutorAvatar,
-    deleteExecutorAvatar,
-
-    executorSignup,
-    executorLogin,
-    updateExecutorProfile,
-
-    uploadOrderImage,
-    deleteOrderImage,
-
-    createOrder,
-    updateOrder,
-    deleteOrder,
-
-    createOrderRequest,
-    cancelOrderRequest,
-    acceptOrderRequest,
-    repulseOrderRequest,
-    acceptOrderWork,
-    repulseOrderWork,
-    writeFeedbackExecutor,
-    writeFeedbackClient,
+    registerClientNotificationToken: (p, args, ctx) => registerNotificationToken(args, ctx, 'client'),
+    registerExecutorNotificationToken: (p, args, ctx) => registerNotificationToken(args, ctx, 'executor'),
+    deleteClientNotificationToken: (p, args, ctx) => deleteNotificationToken(args, ctx, 'client'),
+    deleteExecutorNotificationToken: (p, args, ctx) => deleteNotificationToken(args, ctx, 'executor'),
+    clientSignup: (p, args, ctx) => signup(args, ctx, 'client'),
+    executorSignup: (p, args, ctx) => signup(args, ctx, 'executor'),
+    clientLogin: (p, args, ctx) => login(args, ctx, 'client'),
+    executorLogin: (p, args, ctx) => login(args, ctx, 'executor'),
+    updateClientProfile: (p, args, ctx) => updateProfile(args, ctx, 'client'),
+    updateExecutorProfile: (p, args, ctx) => updateProfile(args, ctx, 'executor'),
+    uploadClientAvatar: (p, { file }, ctx) => uploadAvatar(file, ctx, 'client'),
+    uploadExecutorAvatar: (p, { file }, ctx) => uploadAvatar(file, ctx, 'executor'),
+    deleteClientAvatar: (p, args, ctx) => deleteAvatar(args, ctx, 'client'),
+    deleteExecutorAvatar: (p, args, ctx) => deleteAvatar(args, ctx, 'executor'),
+    uploadOrderImage, deleteOrderImage, createOrder, updateOrder, deleteOrder,
+    createOrderRequest, cancelOrderRequest, acceptOrderRequest,
+    repulseOrderRequest: (p, args, ctx) => changeWork(args, ctx, 'cancel'),
+    acceptOrderWork: (p, args, ctx) => changeWork(args, ctx, 'finish'),
+    repulseOrderWork: (p, args, ctx) => changeWork(args, ctx, 'reject'),
+    writeFeedbackExecutor: (p, args, ctx) => feedback(args, ctx, 'client'),
+    writeFeedbackClient: (p, args, ctx) => feedback(args, ctx, 'executor'),
 }

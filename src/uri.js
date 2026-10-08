@@ -1,6 +1,3 @@
-// const IMAGES_URI = '../../../../../var/www/clex.kz'
-const IMAGES_URI = '../../public'
-
-module.exports = {
-    IMAGES_URI
-}
+// Kept for tools importing the legacy name; the path is now configurable.
+const { assetsDir } = require('./config')
+module.exports = { IMAGES_URI: assetsDir }

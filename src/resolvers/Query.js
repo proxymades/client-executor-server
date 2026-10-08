@@ -1,9 +1,11 @@
-const bcrypt = require('bcryptjs')
+const { requireRole, ownedOrder, identifier } = require('../access')
+const validate = require('../validation')
 
 //----------- client ------------
 
 //check phone
 async function checkClientPhone(parent, args, context) {
+    args = { ...args, phone: validate.phone(args.phone) }
     const findedPhone = await context.prisma.client.findUnique({
         where: {
             phone: args.phone
@@ -119,6 +121,7 @@ async function clientActivity(parent, args, context) {
 
 //client order requests
 async function clientOrderRequests(parent, args, context) {
+    await ownedOrder(context.prisma, args.orderId, context.phone)
     return await context.prisma.orderRequest.findMany({
         where: {
             order: {
@@ -180,15 +183,12 @@ async function clientFeedbacks(parent, args, context) {
 
 //get client order
 async function clientOrder(parent, args, context) {
-    return await context.prisma.order.findUnique({
-        where: {
-            id: args.id
-        }
-    })
+    return ownedOrder(context.prisma, args.id, context.phone)
 }
 
 //get executor order
 async function executorOrder(parent, args, context) {
+    identifier(args.id)
     const { phone } = context
     return await context.prisma.order.findUnique({
         where: {
@@ -222,6 +222,7 @@ async function executorOrder(parent, args, context) {
 
 //check executor phone
 async function checkExecutorPhone(parent, args, context) {
+    args = { ...args, phone: validate.phone(args.phone) }
     const findedPhone = await context.prisma.executor.findUnique({
         where: {
             phone: args.phone
@@ -259,10 +260,10 @@ async function executorFeed(parent, args, context) {
     return await context.prisma.order.findMany({
         where: {
             city: {
-                in: args.city
+                in: validate.choices(args.city, validate.cities)
             },
             category: {
-                in: args.category
+                in: validate.choices(args.category, validate.categories)
             },
             isWork: false,
             isReady: false,
@@ -414,3 +415,14 @@ module.exports = {
     executorFeedbacks,
 }
 
+
+// All account and order reads require the corresponding role. Phone checks
+// remain public because the existing registration form uses them.
+for (const [name, resolver] of Object.entries(module.exports)) {
+    if (name.startsWith('check')) continue
+    const role = name.startsWith('client') ? 'client' : 'executor'
+    module.exports[name] = (parent, args, context, info) => {
+        requireRole(context, role)
+        return resolver(parent, args, context, info)
+    }
+}

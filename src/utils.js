@@ -1,74 +1,32 @@
-//core
 const jwt = require('jsonwebtoken')
-const APP_SECRET = process.env.APP_SECRET
-const IMAGE_SECRET = process.env.IMAGE_SECRET
+const { AuthenticationError } = require('apollo-server-express')
+const { appSecret, tokenTtl } = require('./config')
 
-//Получение и верификация токена
-function getTokenPayload(token) {
-    return jwt.verify(token, APP_SECRET)
+if (!appSecret || appSecret.length < 32) {
+    throw new Error('Set APP_SECRET to a random secret of at least 32 characters in .env')
 }
 
-//get context phone
-function getPhone(req, authToken) {
-    if (req) {
-        const authHeader = req.headers.authorization
-        if (authHeader) {
-            const token = authHeader.replace('Bearer ', '')
-            if (!token) {
-                throw new Error('Токен не найден')
-            }
-            const { phone } = getTokenPayload(token)
-            return phone
+function getAuth(req) {
+    const header = req && req.headers.authorization
+    if (!header) return { phone: null, id: null, type: null }
+    try {
+        if (!/^Bearer \S+$/.test(header)) throw new Error('Invalid authorization header')
+        const payload = jwt.verify(header.slice(7), appSecret, { algorithms: ['HS256'] })
+        if (!/^[0-9]{10,20}$/.test(payload.phone) ||
+            !/^[a-zA-Z0-9_-]{1,128}$/.test(payload.id) ||
+            !['client', 'executor'].includes(payload.type) || !Number.isFinite(payload.exp)) {
+            throw new Error('Invalid token payload')
         }
-    } else if (authToken) {
-        const { phone } = getTokenPayload(authToken)
-        return phone
+        return { phone: payload.phone, id: payload.id, type: payload.type }
+    } catch {
+        throw new AuthenticationError('Сессия завершена. Войдите снова')
     }
-    throw new Error('Вы не аутентифицированы')
 }
 
-//get context id
-function getId(req, authToken) {
-    if (req) {
-        const authHeader = req.headers.authorization
-        if (authHeader) {
-            const token = authHeader.replace('Bearer ', '')
-            if (!token) {
-                throw new Error('Токен не найден')
-            }
-            const { id } = getTokenPayload(token)
-            return id
-        }
-    } else if (authToken) {
-        const { id } = getTokenPayload(authToken)
-        return id
-    }
-    throw new Error('Вы не аутентифицированы')
+function signToken(user, type) {
+    return jwt.sign({ phone: user.phone, id: user.id, type }, appSecret, {
+        algorithm: 'HS256', expiresIn: tokenTtl,
+    })
 }
 
-//get context type
-function getType(req, authToken) {
-    if (req) {
-        const authHeader = req.headers.authorization
-        if (authHeader) {
-            const token = authHeader.replace('Bearer ', '')
-            if (!token) {
-                throw new Error('Токен не найден')
-            }
-            const { type } = getTokenPayload(token)
-            return type
-        }
-    } else if (authToken) {
-        const { type } = getTokenPayload(authToken)
-        return type
-    }
-    throw new Error('Вы не аутентифицированы')
-}
-
-module.exports = {
-    APP_SECRET,
-    IMAGE_SECRET,
-    getPhone,
-    getId,
-    getType,
-}
+module.exports = { getAuth, signToken }

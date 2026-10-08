@@ -1,14 +1,21 @@
 # Client Executor Server – CLEX
 
-The backend for the archived CLEX mobile marketplace MVP, originally developed in 2022. Customers create orders for printing, promotional products and outdoor advertising; contractors submit offers, receive assignments and exchange reviews after completion.
+The open source backend for the [CLEX customer and contractor application](https://github.com/proxymades/client-executor-mobile). Customers create orders for printing, promotional products and outdoor advertising; contractors submit offers, receive assignments and exchange reviews after completion.
+
+Try the API with the companion mobile application and synthetic demo accounts. Questions, bug reports and contributions are welcome through [Issues](https://github.com/proxymades/client-executor-server/issues) and [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Stack
 
-Node.js, Express 4, Apollo Server 3.7, GraphQL 16, Prisma 3.14, MySQL, bcrypt and optional Firebase Admin notifications. Dependencies remain on the original major versions; this repository is a portfolio archive, not a production starter.
+Node.js, Express 4, Apollo Server 3.7, GraphQL 16, Prisma 3.14, MySQL, bcrypt and optional Firebase Admin notifications. Dependency updates and improvements to local setup are part of ongoing development.
 
 Use Node.js 22.16 or newer for built-in `.env` loading. Local checks were run with Node.js 22.21.1 and npm 10.9.4.
 
 ## Development setup
+
+```sh
+git clone https://github.com/proxymades/client-executor-server.git
+cd client-executor-server
+```
 
 Use a separate, empty MySQL development database. Do not point schema or demo commands at an existing production database.
 
@@ -99,9 +106,17 @@ TEST_DATABASE_URL='mysql://test-user:test-password@127.0.0.1:3306/clex_test' npm
 
 The integration test creates and removes only its own test records. It exercises simultaneous offers, simultaneous selection and duplicate feedback. It has not been run locally because a dedicated MySQL instance was unavailable.
 
-## Limits and publication
+## Current development priorities
 
-Before production use, upgrade the legacy dependencies and add rate limiting, phone ownership verification, recovery and revocation workflows, monitoring, backups and a durable notification queue. Current push delivery is best effort.
+- Run the MySQL integration test against an isolated database and verify the full mobile/API workflow.
+- Simplify local startup and keep dependency/toolchain support up to date.
+- Add rate limiting, phone ownership verification, account recovery and session revocation.
+- Improve notification delivery with retries and a durable queue; delivery is currently best effort.
+- Prepare monitoring, backups and deployment instructions for production use.
+
+The current checks and remaining validation are described above. Open an issue if you encounter a setup problem or want to discuss a feature before implementing it.
+
+## Publication
 
 See [PUBLISHING.md](PUBLISHING.md). Removing a secret from the latest commit does not remove it from earlier commits. The local history was cleaned before publication; the old private GitHub repositories were left unchanged.
 

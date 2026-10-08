@@ -28,4 +28,4 @@ Cleanup does not revoke credentials. The database password and Firebase Admin ke
 
 ## Remaining validation
 
-The archived dependencies still need a native toolchain migration for the installed Xcode environment. Native screenshots, Firebase push delivery and the dedicated MySQL concurrency test remain pending; see the repository README and `docs/PREPARATION.md`.
+Native iOS compatibility with the installed Xcode environment still needs work. Native screenshots, Firebase push delivery and the dedicated MySQL concurrency test remain pending; see the repository README and `docs/PREPARATION.md`.

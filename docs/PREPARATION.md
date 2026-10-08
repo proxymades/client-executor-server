@@ -73,3 +73,9 @@ The user chose to preserve and clean local history and publish to new repositori
 Checksums confirmed that the rewrite changed none of the current tracked working files. A full stored-object audit inspected 711 mobile blobs/commits and 153 server blobs/commits after cleanup, including unreachable objects. No known removed secret values or additional private-key/token indicators remained. Local ignored configuration and credential files were preserved.
 
 The publication update changes these tracked files: `README.md`, `PUBLISHING.md`, `docs/PREPARATION.md`, `scripts/check-public-files.js`, and on the server `scripts/check.js`. The historical check now inspects all reachable file blobs. The server recognizes the new companion folder name while retaining support for the original local layout.
+
+## Project presentation update – 2026-10-08
+
+The owner intends this to be an open source project that people can run, test, discuss and contribute to. The earlier archive/portfolio description was an incorrect assumption and was removed from the current README. Technical verification limits remain explicit. README links, contribution guidance and issue templates now support questions, bug reports and feature proposals.
+
+Changed existing files: `README.md`, `PUBLISHING.md`, `docs/PREPARATION.md`. New files: `CONTRIBUTING.md`, `.github/ISSUE_TEMPLATE/bug_report.md`, `.github/ISSUE_TEMPLATE/question.md`, `.github/ISSUE_TEMPLATE/feature_request.md`. Application and API behavior were not changed by this documentation update.

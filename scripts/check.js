@@ -16,9 +16,10 @@ for (const file of [...files(path.join(root, 'src')), ...files(__dirname), ...fi
 const { typeDefs } = require('../src/typeDefs/schema')
 const schema = buildASTSchema(typeDefs)
 const errors = validateSchema(schema)
-const gqlDir = path.resolve(root, '../clex/src/gql')
+const gqlDir = ['../client-executor-mobile/src/gql', '../clex/src/gql']
+    .map(dir => path.resolve(root, dir)).find(dir => fs.existsSync(dir))
 let documents = 0
-if (fs.existsSync(gqlDir)) {
+if (gqlDir) {
     for (const file of files(gqlDir)) {
         for (const match of fs.readFileSync(file, 'utf8').matchAll(/gql`([\s\S]*?)`/g)) {
             errors.push(...validate(schema, parse(match[1])).map(error => new Error(`${path.relative(root, file)}: ${error.message}`)))

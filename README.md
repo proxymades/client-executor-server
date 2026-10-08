@@ -1,4 +1,4 @@
-# CLEX GraphQL Server
+# Client Executor Server – CLEX
 
 The backend for the archived CLEX mobile marketplace MVP, originally developed in 2022. Customers create orders for printing, promotional products and outdoor advertising; contractors submit offers, receive assignments and exchange reviews after completion.
 
@@ -89,7 +89,7 @@ npm test
 npx prisma validate
 ```
 
-`check` verifies server syntax and the GraphQL schema. If the companion mobile repository is at `../clex`, it validates its 44 GraphQL documents too.
+`check` verifies server syntax and the GraphQL schema. If [the companion mobile repository](https://github.com/proxymades/client-executor-mobile) is at `../client-executor-mobile` (or the original local path `../clex`), it validates its 44 GraphQL documents too.
 
 The regular tests cover access restrictions, order transitions, reviews, JWT expiry, upload validation and a real HTTP startup without Firebase. Resolver tests use an in-memory Prisma substitute; they do not prove MySQL locking or concurrency. The MySQL integration test is skipped unless `TEST_DATABASE_URL` is set to a separate test database initialized from this schema:
 
@@ -103,7 +103,7 @@ The integration test creates and removes only its own test records. It exercises
 
 Before production use, upgrade the legacy dependencies and add rate limiting, phone ownership verification, recovery and revocation workflows, monitoring, backups and a durable notification queue. Current push delivery is best effort.
 
-See [PUBLISHING.md](PUBLISHING.md). Removing a secret from the latest commit does not remove it from earlier commits. No Git history has been rewritten as part of this preparation.
+See [PUBLISHING.md](PUBLISHING.md). Removing a secret from the latest commit does not remove it from earlier commits. The local history was cleaned before publication; the old private GitHub repositories were left unchanged.
 
 ## License
 

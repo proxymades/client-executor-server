@@ -1,29 +1,31 @@
-# Before public publication
+# Publication and history cleanup
 
-Preparation keeps the original local Git history and working credentials. `.env` and service-account JSON files are excluded from new commits but may still exist on the development machine.
+The local histories were cleaned on 2026-10-08 before publishing to these new repositories:
 
-The original server history contains database credentials in `.env`, a Firebase Admin private key and a hard-coded JWT signing secret. The original mobile history contains Firebase project configuration. Neither repository has been pushed or made public during preparation.
+- Mobile: https://github.com/proxymades/client-executor-mobile
+- Server: https://github.com/proxymades/client-executor-server
 
-Review the current Git index:
+The original private GitHub repositories were left unchanged. No force push to them was performed. Local database settings, Firebase credential files and mobile endpoint overrides remain on the development machine and are excluded from Git.
+
+## What was removed
+
+- Mobile history: the original Android Firebase project configuration.
+- Server history: `.env` and the Firebase Admin service-account JSON.
+- Historical server code: the original JWT signing and image secrets were replaced with environment reads. Their exact values were removed from historical blobs and commit messages.
+
+The rewrite preserved all 29 mobile and 27 server commits that existed at cleanup time. A checksum comparison confirmed that the current tracked working files were unchanged by the rewrite. All stored blobs and commit objects were inspected for the known removed values and additional private-key/token indicators, including unreachable objects; no matches remained. The only local branch was retained and renamed to `main` for the new repositories.
+
+## Checks before future publication
 
 ```sh
 npm run check:public
-```
-
-Then check the historical paths known to have contained private material:
-
-```sh
 npm run check:public -- --history
 ```
 
-The targeted scanner prints paths only, never credential values. It is not a complete secret or security audit. An unsuccessful historical check is expected until the old private material has been removed from history or a clean publication history has been created. The history check must pass before publishing this server history.
+The scanner prints file paths only, never credential values. The historical mode inspects all reachable file blobs. It is a targeted check, not a complete security audit. Avoid merging old uncleaned history from another machine or from the original private repositories.
 
-Before publication:
+Cleanup does not revoke credentials. The database password and Firebase Admin key were preserved locally and were not rotated. The current API uses the new signing secret generated during preparation. If any old credential has escaped private storage, revoke or replace it at its provider.
 
-- Decide whether to preserve and clean history or start a new publication history. This preparation has done neither.
-- Replace any previously exposed database passwords and revoke/replace the Firebase Admin key if it has escaped private storage. Configure deployment with the new JWT signing secret; existing sessions must sign in again.
-- Exclude personal photos, database dumps, local settings and signing credentials.
-- Verify native app behavior, Firebase delivery and the MySQL integration test on isolated development systems.
-- Add real screenshots from demo accounts and review the ISC license.
+## Remaining validation
 
-Historical cleanup and public publishing are separate steps. See GitHub's instructions at https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository.
+The archived dependencies still need a native toolchain migration for the installed Xcode environment. Native screenshots, Firebase push delivery and the dedicated MySQL concurrency test remain pending; see the repository README and `docs/PREPARATION.md`.

@@ -19,7 +19,6 @@ if (process.argv.includes('--history')) {
         const match = line.match(/^([a-f0-9]+) (.+)$/)
         if (!match) continue
         const [, object, file] = match
-        if (!/(^|\/)\.env(?:\.|$)|firebase-adminsdk|service-account|(^|\/)src\/utils\.js$/.test(file)) continue
         if (git(['cat-file', '-t', object]).trim() !== 'blob') continue
         inspect(`history:${file}`, git(['cat-file', 'blob', object]))
     }
@@ -27,4 +26,4 @@ if (process.argv.includes('--history')) {
 if (bad.size) {
     console.error('Files requiring review before publication (contents hidden):\n' + [...bad].join('\n'))
     process.exitCode = 1
-} else console.log('Git index passed the targeted private-file check' + (process.argv.includes('--history') ? ' including selected historical paths' : ' (history not checked)'))
+} else console.log('Git index passed the targeted private-file check' + (process.argv.includes('--history') ? ' including all reachable historical blobs' : ' (history not checked)'))

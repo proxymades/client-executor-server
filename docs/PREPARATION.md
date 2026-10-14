@@ -1,5 +1,7 @@
 # Preparation record
 
+[English](PREPARATION.md) | [Русский](PREPARATION.ru.md)
+
 Verified on 2026-10-08. Initial preparation was performed in the original repository without creating a copy. History was cleaned later for the new publication repositories; see the update below.
 
 ## Validation
@@ -79,3 +81,9 @@ The publication update changes these tracked files: `README.md`, `PUBLISHING.md`
 The owner intends this to be an open source project that people can run, test, discuss and contribute to. The earlier archive/portfolio description was an incorrect assumption and was removed from the current README. Technical verification limits remain explicit. README links, contribution guidance and issue templates now support questions, bug reports and feature proposals.
 
 Changed existing files: `README.md`, `PUBLISHING.md`, `docs/PREPARATION.md`. New files: `CONTRIBUTING.md`, `.github/ISSUE_TEMPLATE/bug_report.md`, `.github/ISSUE_TEMPLATE/question.md`, `.github/ISSUE_TEMPLATE/feature_request.md`. Application and API behavior were not changed by this documentation update.
+
+## Bilingual documentation update – 2026-10-14
+
+Added complete Russian versions of README, contribution guidance, the publication record and this report. Documents link to both languages through `English | Русский`; English remains the default README. Separate Russian bug, question and feature templates were added to Issues. The mobile screenshot checklist was translated too. Commands, parameters and validation limits are retained in both languages.
+
+Changed existing files: `README.md`, `CONTRIBUTING.md`, `PUBLISHING.md`, `docs/PREPARATION.md`, `.github/ISSUE_TEMPLATE/bug_report.md`, `.github/ISSUE_TEMPLATE/question.md`, `.github/ISSUE_TEMPLATE/feature_request.md`; on mobile, also `docs/screenshots/README.md`. New files: `README.ru.md`, `CONTRIBUTING.ru.md`, `PUBLISHING.ru.md`, `docs/PREPARATION.ru.md`, `.github/ISSUE_TEMPLATE/bug_report.ru.md`, `.github/ISSUE_TEMPLATE/question.ru.md`, `.github/ISSUE_TEMPLATE/feature_request.ru.md`; on mobile, also `docs/screenshots/README.ru.md`.

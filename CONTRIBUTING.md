@@ -1,5 +1,7 @@
 # Contributing
 
+[English](CONTRIBUTING.md) | [Русский](CONTRIBUTING.ru.md)
+
 This project is open for testing, questions, bug reports and pull requests. You can help by trying the customer/contractor workflow, reporting setup problems, improving documentation or working on an issue.
 
 ## Try the project
@@ -9,6 +11,8 @@ Follow the [README](README.md). Use the companion repository and synthetic demo 
 ## Questions and bugs
 
 Open an [issue](https://github.com/proxymades/client-executor-server/issues/new/choose). Include what you are trying to do, the steps you followed, expected and actual behavior, and relevant toolchain versions. For mobile issues, specify Android/iOS and device or simulator. Include only the error output needed to reproduce the problem; remove passwords, tokens, connection strings and personal data.
+
+Questions and contributions are welcome in English or Russian. The issue chooser offers templates in both languages.
 
 ## Changes
 

@@ -1,5 +1,5 @@
 ---
-name: Question
+name: Question (English)
 about: Ask about running, using or understanding the project
 title: ''
 labels: ''

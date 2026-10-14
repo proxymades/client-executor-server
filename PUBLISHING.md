@@ -1,5 +1,7 @@
 # Publication and history cleanup
 
+[English](PUBLISHING.md) | [Русский](PUBLISHING.ru.md)
+
 The local histories were cleaned on 2026-10-08 before publishing to these new repositories:
 
 - Mobile: https://github.com/proxymades/client-executor-mobile

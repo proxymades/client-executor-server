@@ -1,5 +1,5 @@
 ---
-name: Feature proposal
+name: Feature proposal (English)
 about: Suggest a feature or improvement and discuss its scope
 title: ''
 labels: ''

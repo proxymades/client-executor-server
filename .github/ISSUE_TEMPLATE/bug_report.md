@@ -1,5 +1,5 @@
 ---
-name: Bug report
+name: Bug report (English)
 about: Report a reproducible problem with setup or application behavior
 title: ''
 labels: ''
